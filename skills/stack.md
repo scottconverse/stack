@@ -220,9 +220,9 @@ Then tell the user:
 > Longhand and Context-Mode are installed. Hardgate requires one
 > decision from you.
 >
-> Run `/hard-gate` now and select **context-mode** as the enforcement
-> target. When it is done, reply to this message and I will run the
-> final verification.
+> Run `/hard-gate` now and follow the prompts to choose which tools
+> to enforce. When it is done, reply to this message and I will run
+> the final verification.
 
 **STOP. Do not run verify.py or print results until the user replies.
 This is not optional.**

@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>stack — User Manual</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --accent:   #58a6ff;
+      --green:    #3fb950;
+      --yellow:   #d29922;
+      --orange:   #f0883e;
+      --red:      #f85149;
+      --sidebar:  240px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar);
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      padding: 32px 0;
+    }
+    .sidebar-logo {
+      padding: 0 20px 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .sidebar-logo a {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-logo .badge {
+      font-size: 10px;
+      font-weight: 600;
+      background: #1c2d40;
+      color: var(--accent);
+      padding: 2px 7px;
+      border-radius: 10px;
+      border: 1px solid #2d5a8e;
+    }
+    .nav-section {
+      padding: 0 20px;
+      margin-bottom: 4px;
+    }
+    .nav-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 12px 0 6px;
+    }
+    .nav-link {
+      display: block;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      line-height: 1.4;
+      transition: background .1s, color .1s;
+    }
+    .nav-link:hover { background: var(--surface); color: var(--text); }
+    .nav-link.active { background: #1c2d40; color: var(--accent); }
+    .nav-sub {
+      padding-left: 14px;
+      border-left: 1px solid var(--border);
+      margin-left: 10px;
+    }
+    .sidebar-footer {
+      padding: 24px 20px 0;
+      border-top: 1px solid var(--border);
+      margin-top: 20px;
+    }
+    .sidebar-footer a {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 4px 0;
+    }
+    .sidebar-footer a:hover { color: var(--accent); }
+
+    /* ── Main content ── */
+    main {
+      flex: 1;
+      min-width: 0;
+      max-width: 780px;
+      padding: 48px 56px 80px;
+    }
+
+    /* ── Typography ── */
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 .sub { display: block; font-size: 15px; font-weight: 400; color: var(--muted); margin-top: 6px; letter-spacing: 0; }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      margin: 52px 0 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      scroll-margin-top: 24px;
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 32px 0 10px;
+      color: var(--text);
+      scroll-margin-top: 24px;
+    }
+    h4 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin: 24px 0 8px;
+    }
+    p { margin-bottom: 14px; }
+    p:last-child { margin-bottom: 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    strong { font-weight: 600; color: var(--text); }
+
+    /* ── Inline code ── */
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 12.5px;
+      background: #21262d;
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: #e6edf3;
+    }
+
+    /* ── Code blocks ── */
+    pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 16px 0;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+      color: #c9d1d9;
+    }
+    .code-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1c2128;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 8px 16px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      margin-top: 16px;
+    }
+    .code-label + pre { margin-top: 0; border-radius: 0 0 8px 8px; }
+
+    /* ── Lists ── */
+    ul, ol {
+      padding-left: 24px;
+      margin-bottom: 14px;
+    }
+    li { margin-bottom: 6px; }
+    li:last-child { margin-bottom: 0; }
+    ul li::marker { color: var(--muted); }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 16px 0;
+    }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+      background: var(--surface);
+    }
+    th:first-child { border-radius: 6px 0 0 0; }
+    th:last-child  { border-radius: 0 6px 0 0; }
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+    td:first-child { font-weight: 600; }
+
+    /* ── Callouts ── */
+    .callout {
+      display: flex;
+      gap: 14px;
+      padding: 16px 18px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .callout-icon { flex-shrink: 0; font-size: 16px; margin-top: 1px; }
+    .callout.tip    { background: #0d2b1a; border: 1px solid #1e5c38; }
+    .callout.warn   { background: #1a1500; border: 1px solid #4a3800; }
+    .callout.info   { background: #0d1f36; border: 1px solid #2d5a8e; }
+    .callout.danger { background: #1a0d0d; border: 1px solid #6e1a1a; }
+    .callout.tip    .callout-icon { color: var(--green); }
+    .callout.warn   .callout-icon { color: var(--yellow); }
+    .callout.info   .callout-icon { color: var(--accent); }
+    .callout.danger .callout-icon { color: var(--red); }
+    .callout strong { display: block; margin-bottom: 4px; }
+
+    /* ── Step list ── */
+    .steps { list-style: none; padding: 0; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 18px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      margin: 0;
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1c2d40;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+    .steps li > div h3 { margin-top: 0; }
+
+    /* ── Tool cards ── */
+    .tool-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 22px 24px;
+      margin-bottom: 16px;
+    }
+    .tool-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .tool-card-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+    .tool-card-icon.green  { background: #0d2b1a; }
+    .tool-card-icon.blue   { background: #0d1f36; }
+    .tool-card-icon.orange { background: #2b1a0d; }
+    .tool-card h3 { margin: 0; font-size: 17px; }
+    .tool-card .by { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .tool-card p { margin-bottom: 10px; font-size: 14px; }
+    .tool-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 4px;
+    }
+    .tag-green  { background: #0d2b1a; color: var(--green);  border: 1px solid #1e5c38; }
+    .tag-blue   { background: #0d1f36; color: var(--accent); border: 1px solid #2d5a8e; }
+    .tag-orange { background: #2b1a0d; color: var(--orange); border: 1px solid #6e3a0d; }
+
+    /* ── Arch diagram ── */
+    .arch {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 16px 0;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.75;
+      color: #c9d1d9;
+      overflow-x: auto;
+    }
+
+    /* ── Check/error table ── */
+    .check-pass { color: var(--green); font-weight: 700; }
+    .check-fail { color: var(--red);   font-weight: 700; }
+    .check-warn { color: var(--yellow);font-weight: 700; }
+
+    /* ── Glossary ── */
+    .glossary dt {
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 18px;
+      font-size: 14px;
+    }
+    .glossary dd {
+      margin-left: 0;
+      padding-left: 16px;
+      border-left: 2px solid var(--border);
+      font-size: 14px;
+      color: #c9d1d9;
+      margin-top: 4px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 800px) {
+      .sidebar { display: none; }
+      main { padding: 32px 24px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <a href="index.html">
+      stack
+      <span class="badge">v1.0.0</span>
+    </a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Getting Started</div>
+    <a href="#what-is-this" class="nav-link">What is this?</a>
+    <a href="#the-three-tools" class="nav-link">The three tools</a>
+    <div class="nav-sub">
+      <a href="#longhand" class="nav-link">Longhand</a>
+      <a href="#context-mode" class="nav-link">Context-Mode</a>
+      <a href="#hardgate" class="nav-link">Hardgate</a>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Architecture</div>
+    <a href="#how-they-work-together" class="nav-link">How they work together</a>
+    <a href="#request-flow" class="nav-link">Request flow</a>
+    <a href="#config-layout" class="nav-link">Config file layout</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Installation</div>
+    <a href="#before-you-start" class="nav-link">Before you start</a>
+    <a href="#install-steps" class="nav-link">Install steps</a>
+    <a href="#re-running" class="nav-link">Re-running safely</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Verification</div>
+    <a href="#what-the-verifier-checks" class="nav-link">What the verifier checks</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Troubleshooting</div>
+    <a href="#when-things-go-wrong" class="nav-link">When things go wrong</a>
+    <a href="#restoring" class="nav-link">Restoring your config</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Reference</div>
+    <a href="#glossary" class="nav-link">Glossary</a>
+  </div>
+
+  <div class="sidebar-footer">
+    <a href="index.html">← Back to landing page</a>
+    <a href="README-FULL.pdf">Full PDF documentation</a>
+    <a href="CONTRIBUTING.md">Contributing guide</a>
+    <a href="https://github.com/scottconverse/stack">GitHub</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+  <h1>
+    User Manual
+    <span class="sub">Plain-language guide to what this does, how to use it, and what to do when something goes wrong.</span>
+  </h1>
+
+  <!-- ── What is this ── -->
+  <h2 id="what-is-this">What is this?</h2>
+
+  <p><code>stack</code> installs three tools that work together to make Claude Code more reliable, more self-aware, and more controlled. You run one command — <code>/stack</code> — and it sets up all three in the right order with the right wiring.</p>
+
+  <p>Once installed, these tools run automatically in the background every time you use Claude Code. You don't need to think about them during normal use. They change <em>how</em> Claude behaves, not what you ask it to do.</p>
+
+  <div class="callout info">
+    <span class="callout-icon">ℹ</span>
+    <div><strong>New to Claude Code?</strong> Claude Code is Anthropic's command-line tool for using Claude as a coding assistant in your terminal. This manual assumes you already have it installed.</div>
+  </div>
+
+  <!-- ── The three tools ── -->
+  <h2 id="the-three-tools">The three tools</h2>
+
+  <div class="tool-card" id="longhand">
+    <div class="tool-card-header">
+      <div class="tool-card-icon green">🧠</div>
+      <div>
+        <h3>Longhand</h3>
+        <div class="by">By <a href="https://github.com/Wynelson94">Wynelson94</a> · <a href="https://github.com/Wynelson94/longhand">github.com/Wynelson94/longhand</a></div>
+      </div>
+    </div>
+    <p>By default, Claude Code forgets everything when you close a session. Longhand fixes this. It saves every conversation to a database on your computer and gives Claude a way to search those past sessions. When you start a new conversation, Claude can recall what you worked on before — decisions made, bugs found, files changed.</p>
+    <p><strong>What you'll notice:</strong> Claude will sometimes reference previous conversations without you prompting it. You can also ask Claude directly: <em>"What did we work on last week?"</em> and it will know.</p>
+    <p><strong>Privacy:</strong> Everything is stored locally on your machine. Nothing is sent to the cloud. The database lives in your home directory.</p>
+    <span class="tool-tag tag-green">Memory Layer</span>
+  </div>
+
+  <div class="tool-card" id="context-mode">
+    <div class="tool-card-header">
+      <div class="tool-card-icon blue">🔲</div>
+      <div>
+        <h3>Context-Mode</h3>
+        <div class="by">By <a href="https://github.com/scottconverse">scottconverse</a> · <a href="https://github.com/scottconverse/context-mode">github.com/scottconverse/context-mode</a></div>
+      </div>
+    </div>
+    <p>When Claude runs a command — reading a file, running a test, fetching a web page — the raw output normally flows directly into the conversation and takes up space. On large codebases or long sessions, this causes Claude to start forgetting earlier parts of the conversation.</p>
+    <p>Context-Mode intercepts those outputs and processes them in a sandbox. Claude gets a structured summary instead of the raw dump. The conversation stays focused.</p>
+    <p><strong>What you'll notice:</strong> Sessions run longer before hitting context limits. Claude is less likely to lose track of things from earlier in a conversation.</p>
+    <p><strong>What it doesn't do:</strong> It doesn't change Claude's answers or hide information. It filters noise, not content.</p>
+    <span class="tool-tag tag-blue">Context Layer</span>
+  </div>
+
+  <div class="tool-card" id="hardgate">
+    <div class="tool-card-header">
+      <div class="tool-card-icon orange">🔒</div>
+      <div>
+        <h3>Hardgate</h3>
+        <div class="by">By <a href="https://github.com/scottconverse">scottconverse</a> · <a href="https://github.com/scottconverse/hardgate">github.com/scottconverse/hardgate</a></div>
+      </div>
+    </div>
+    <p>Hardgate lets you define tools that Claude is not allowed to use without your explicit approval — pushing to GitHub, deleting files, running database migrations, whatever you choose. When Claude tries to use a blocked tool, it stops and asks you. You decide whether to proceed.</p>
+    <p><strong>What you'll notice:</strong> Before certain risky operations, Claude will pause and ask rather than act. This is intentional.</p>
+    <p><strong>No blocked tools by default.</strong> Hardgate installs the enforcement infrastructure. You choose the rules during the interactive install step.</p>
+    <span class="tool-tag tag-orange">Enforcement Layer</span>
+  </div>
+
+  <!-- ── How they work together ── -->
+  <h2 id="how-they-work-together">How they work together</h2>
+
+  <p>Each tool hooks into a different Claude Code lifecycle event. They don't conflict with each other, and if one is misconfigured, the others continue working independently.</p>
+
+  <div class="arch">
+EVENT                    TOOL              ACTION
+─────────────────────────────────────────────────────────────────
+SessionStart             Hardgate          Reminds Claude of its blocked tools
+
+UserPromptSubmit         Longhand          Records your message to local database
+  (every message)
+
+PreToolUse               Hardgate          Checks tool against the blocked list
+  (before every           Context-Mode     Runs tool in sandbox, returns a clean
+   tool call)                              summary instead of raw output
+
+SessionEnd               Longhand          Saves full session to searchable memory
+  (on close)
+</div>
+
+  <h3 id="request-flow">Request flow in detail</h3>
+
+  <div class="arch">
+ 1. You type a message
+          │
+          ▼
+ 2. UserPromptSubmit fires
+    └─ Longhand records prompt to database
+
+ 3. Claude decides to use a tool (e.g. run a bash command)
+          │
+          ▼
+ 4. PreToolUse — Hardgate checks first
+    ├─ Tool is on the blocked list?
+    │   YES ─▶ exit 2 · tool call cancelled · Claude tells you
+    │   NO  ─▶ continues
+          │
+          ▼
+ 5. PreToolUse — Context-Mode intercepts
+    └─ Runs tool in sandbox subprocess
+       Produces structured summary
+       Claude receives summary, not raw output
+
+ 6. Claude formulates its response
+
+ 7. You close the session
+          │
+          ▼
+ 8. SessionEnd fires
+    └─ Longhand saves full session · indexed for future recall
+</div>
+
+  <h3 id="config-layout">Config file layout</h3>
+
+  <p>All three tools write into <code>~/.claude/settings.json</code>. The stack installer creates a timestamped backup before touching anything.</p>
+
+  <div class="arch">~/.claude/settings.json
+├── hooks
+│   ├── SessionStart      ← Hardgate reminder
+│   ├── UserPromptSubmit  ← Longhand prompt hook
+│   ├── PreToolUse        ← Hardgate exit-2 enforcement
+│   │                        Context-Mode (Bash, Read, WebFetch + 6 more)
+│   └── SessionEnd        ← Longhand session ingest
+└── mcpServers
+    ├── longhand           ← memory query server
+    └── context-mode       ← sandbox execution server</div>
+
+  <!-- ── Installation ── -->
+  <h2 id="before-you-start">Before you start</h2>
+
+  <p>You'll need the following before running <code>/stack</code>:</p>
+
+  <table>
+    <thead><tr><th>Requirement</th><th>How to check</th><th>Where to get it</th></tr></thead>
+    <tbody>
+      <tr><td>Claude Code</td><td>Run <code>claude --version</code></td><td>anthropic.com/claude-code</td></tr>
+      <tr><td>Python 3.10+</td><td>Run <code>python --version</code></td><td>python.org/downloads</td></tr>
+      <tr><td>Node.js 18+</td><td>Run <code>node --version</code></td><td>nodejs.org</td></tr>
+      <tr><td>bash shell</td><td>Git Bash or WSL on Windows; Terminal on Mac</td><td>gitforwindows.org</td></tr>
+      <tr><td>stack repo cloned</td><td><code>ls ~/stack/scripts/verify.py</code></td><td>See step 1 below</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠</span>
+    <div><strong>Windows users:</strong> Use Git Bash or WSL. PowerShell and cmd.exe are not supported. The skill file uses bash syntax throughout.</div>
+  </div>
+
+  <h2 id="install-steps">Installation steps</h2>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <h3>Clone the repo</h3>
+        <p>The full repo must be present on your machine. Don't copy just the skill file — the installer requires <code>scripts/verify.py</code> to be alongside it.</p>
+        <pre><code>git clone https://github.com/scottconverse/stack</code></pre>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Open a Claude Code session</h3>
+        <p>Start Claude Code in your terminal.</p>
+        <pre><code>claude</code></pre>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Run <code>/stack</code></h3>
+        <p>Type <code>/stack</code> at the Claude prompt. Claude will check prerequisites, back up your config, and install each tool in order. Most of the install is automatic.</p>
+        <pre><code>/stack</code></pre>
+        <div class="callout info" style="margin-top:14px">
+          <span class="callout-icon">ℹ</span>
+          <div><strong>One interactive step:</strong> Hardgate requires you to make a decision about which tools to enforce. Claude will pause and wait for you to run <code>/hard-gate</code> and reply before continuing.</div>
+        </div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Restart Claude Code</h3>
+        <p>When verification passes, close and reopen Claude Code. The new tools take effect on the next session.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Verify runtime health</h3>
+        <p>After restarting, confirm everything is running — not just configured.</p>
+        <pre><code>longhand doctor
+claude mcp list</code></pre>
+        <p><code>longhand doctor</code> should show green status. <code>claude mcp list</code> should include both <code>longhand</code> and <code>context-mode</code>.</p>
+      </div>
+    </li>
+  </ol>
+
+  <h2 id="re-running">Re-running safely</h2>
+
+  <p>You can run <code>/stack</code> again at any time. Before installing anything, it checks which tools are already fully set up and skips them. Only tools that are missing or partially installed get re-run.</p>
+
+  <p>Each run creates a fresh timestamped backup of your config — multiple runs produce independent snapshots, not overwrites.</p>
+
+  <!-- ── Verification ── -->
+  <h2 id="what-the-verifier-checks">What the verifier checks</h2>
+
+  <p>After installation, <code>scripts/verify.py</code> runs automatically and reports on six checks. You can also run it standalone at any time:</p>
+
+  <pre><code>python scripts/verify.py</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Check</th><th>Status</th><th>What to do if it fails</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Longhand SessionEnd hook</td>
+        <td><span class="check-pass">✓ required</span></td>
+        <td>Run <code>longhand setup</code></td>
+      </tr>
+      <tr>
+        <td>Longhand UserPromptSubmit hook</td>
+        <td><span class="check-pass">✓ required</span></td>
+        <td>Run <code>longhand prompt-hook install</code></td>
+      </tr>
+      <tr>
+        <td>Context-Mode PreToolUse hooks</td>
+        <td><span class="check-pass">✓ required</span></td>
+        <td>Run <code>node install.js</code> from your context-mode directory</td>
+      </tr>
+      <tr>
+        <td>Longhand MCP server</td>
+        <td><span class="check-pass">✓ required</span></td>
+        <td>Run <code>claude mcp add longhand -s user -- longhand mcp-server</code></td>
+      </tr>
+      <tr>
+        <td>Context-Mode MCP server</td>
+        <td><span class="check-pass">✓ required</span></td>
+        <td>Run <code>node install.js</code> from your context-mode directory</td>
+      </tr>
+      <tr>
+        <td>Hardgate enforcement</td>
+        <td><span class="check-warn">⚠ warning only</span></td>
+        <td>Run <code>/hard-gate</code> and select an enforcement target</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>The verifier prints the exact retry command for each failure. The exit code tells you what happened:</p>
+
+  <table>
+    <thead><tr><th>Exit code</th><th>Meaning</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td><code>0</code></td><td>All required checks pass</td><td>Restart Claude Code and you're done</td></tr>
+      <tr><td><code>1</code></td><td>One or more checks failed; config files are intact</td><td>Follow the retry commands printed</td></tr>
+      <tr><td><code>2</code></td><td>A config file is malformed (corrupted)</td><td>Both files are automatically restored from backup</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── Troubleshooting ── -->
+  <h2 id="when-things-go-wrong">When things go wrong</h2>
+
+  <h3>"verify.py not found"</h3>
+  <p>You copied just the skill file instead of cloning the full repo. Fix it:</p>
+  <pre><code>git clone https://github.com/scottconverse/stack
+export STACK_DIR=/path/to/stack</code></pre>
+  <p>Then run <code>/stack</code> again.</p>
+
+  <h3>Verifier exits with code 2</h3>
+  <p>One of your Claude config files has been corrupted. The installer detects this automatically and restores both config files from the timestamped backup it took before the install started. Your settings are returned to exactly the state they were in before you ran <code>/stack</code>. Then retry each failed step using the commands shown in the verifier output.</p>
+
+  <h3><code>longhand doctor</code> shows a failure</h3>
+  <p>Longhand's MCP server is registered in your config but not responding. Try:</p>
+  <pre><code>longhand setup</code></pre>
+  <p>If that doesn't fix it, confirm Python 3.10+ is still on your PATH: <code>python --version</code></p>
+
+  <h3><code>claude mcp list</code> doesn't show longhand or context-mode</h3>
+  <p>The MCP server entries are missing. Re-run the relevant install command:</p>
+  <div class="code-label">For Longhand</div>
+  <pre><code>claude mcp add longhand -s user -- longhand mcp-server</code></pre>
+  <div class="code-label">For Context-Mode</div>
+  <pre><code>node install.js</code></pre>
+
+  <h3>Claude isn't recalling past sessions</h3>
+  <p>Longhand may be installed but hasn't ingested any history yet. Run:</p>
+  <pre><code>longhand ingest-session</code></pre>
+  <p>Then start a fresh Claude Code session.</p>
+
+  <h3>A tool is only partially installed</h3>
+  <p>Run <code>/stack</code> again. The installer detects partial installs and re-runs that tool's installer from scratch.</p>
+
+  <div class="callout warn">
+    <span class="callout-icon">⚠</span>
+    <div><strong>Known limitation:</strong> The verifier checks that config entries are <em>present</em>, not that MCP servers are <em>live</em>. After a successful install, always run <code>longhand doctor</code> and <code>claude mcp list</code> to confirm runtime health — not just config presence.</div>
+  </div>
+
+  <!-- ── Restoring ── -->
+  <h2 id="restoring">Restoring your original config</h2>
+
+  <p>Every time you run <code>/stack</code>, it saves a timestamped backup of both config files:</p>
+
+  <pre><code>~/.claude/settings.json.stack-backup-YYYYMMDD-HHMMSS
+~/.claude.json.stack-backup-YYYYMMDD-HHMMSS</code></pre>
+
+  <p>To find your most recent backup:</p>
+  <pre><code>ls -t ~/.claude/settings.json.stack-backup-* | head -1</code></pre>
+
+  <p>To restore it manually:</p>
+  <pre><code>cp ~/.claude/settings.json.stack-backup-YYYYMMDD-HHMMSS ~/.claude/settings.json</code></pre>
+
+  <!-- ── Glossary ── -->
+  <h2 id="glossary">Glossary</h2>
+
+  <dl class="glossary">
+    <dt>Claude Code</dt>
+    <dd>Anthropic's command-line interface for Claude. Runs in your terminal and lets you give Claude tasks that involve your local files, code, and development tools.</dd>
+
+    <dt>Hook</dt>
+    <dd>A command that Claude Code runs automatically at certain points — before a tool runs, after a session ends, when you submit a prompt. Hooks are how Longhand, Context-Mode, and Hardgate connect into Claude Code's workflow.</dd>
+
+    <dt>MCP server</dt>
+    <dd>A background process that Claude Code connects to and queries during a session. Longhand and Context-Mode each run as MCP servers so Claude can call them directly.</dd>
+
+    <dt>settings.json</dt>
+    <dd>Claude Code's main configuration file, stored at <code>~/.claude/settings.json</code>. Hook definitions and MCP server registrations live here.</dd>
+
+    <dt>Context window</dt>
+    <dd>The amount of text Claude can hold in active memory at one time. When it fills up, Claude starts losing track of earlier parts of the conversation. Context-Mode helps delay this.</dd>
+
+    <dt>SessionEnd hook</dt>
+    <dd>A hook that runs when you close a Claude Code session. Longhand uses this to save the full session to its database.</dd>
+
+    <dt>PreToolUse hook</dt>
+    <dd>A hook that runs before Claude uses any tool. Context-Mode and Hardgate both use this — Hardgate to block forbidden tools, Context-Mode to sandbox output.</dd>
+
+    <dt>UserPromptSubmit hook</dt>
+    <dd>A hook that runs every time you send a message. Longhand uses this to record each prompt as it arrives.</dd>
+
+    <dt>Idempotent</dt>
+    <dd>Safe to run multiple times with the same result. Running <code>/stack</code> twice does not double-install anything.</dd>
+
+    <dt>Exit code</dt>
+    <dd>A number a program returns when it finishes. Exit 0 means success. Exit 1 means something failed. Exit 2 means a config file is malformed and needs restoration.</dd>
+  </dl>
+
+</main>
+
+</body>
+</html>

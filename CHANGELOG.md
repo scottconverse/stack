@@ -19,8 +19,9 @@ Versioning: [Semantic Versioning](https://semver.org/).
   command (`winget` / `brew` / `apt`) instead of a bare URL
 - Claude Code CLI missing: installer offers to run
   `npm install -g @anthropic-ai/claude-code` rather than failing immediately
-- 21 new unit tests covering `_run()`, idempotency helpers, and
-  `_find_context_mode_dir()` — total test count 29 → 50
+- 30 new unit tests covering `_run()`, idempotency helpers,
+  `_find_context_mode_dir()`, plus adversarial cases (nonexistent commands,
+  malformed JSON, depth limits, HOOKS_DIR-as-file) — total: 29 → 59
 
 ## [1.1.0] — 2026-04-16
 

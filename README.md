@@ -107,7 +107,7 @@ pip install pytest
 pytest tests/ -v
 ```
 
-50 tests covering all verifier logic, exit codes, and installer behaviour.
+59 tests covering all verifier logic, exit codes, and installer behaviour.
 
 ## License
 

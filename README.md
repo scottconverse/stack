@@ -1,4 +1,4 @@
-# stack · v1.1.0
+# stack · v1.1.1
 
 **One skill to install them all.**
 
@@ -107,7 +107,7 @@ pip install pytest
 pytest tests/ -v
 ```
 
-29 tests covering all verifier logic and exit codes.
+50 tests covering all verifier logic, exit codes, and installer behaviour.
 
 ## License
 

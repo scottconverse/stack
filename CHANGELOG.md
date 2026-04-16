@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] — 2026-04-16
+
+### Fixed
+- `install.py` subprocess output now captured and shown only on failure —
+  eliminates verbose pip/node noise on successful installs
+- Hardgate idempotency: re-running the installer no longer pauses for
+  the interactive `/hard-gate` step when Hardgate is already configured
+- Hardgate instructions no longer prescribe a specific enforcement target;
+  users are directed to follow the prompts and choose for themselves
+- Context-Mode "not found" prompt moved to the prerequisites phase so all
+  missing-dependency questions appear together before installation starts
+- Node.js missing: installer now shows the platform-specific install
+  command (`winget` / `brew` / `apt`) instead of a bare URL
+- Claude Code CLI missing: installer offers to run
+  `npm install -g @anthropic-ai/claude-code` rather than failing immediately
+- 21 new unit tests covering `_run()`, idempotency helpers, and
+  `_find_context_mode_dir()` — total test count 29 → 50
+
 ## [1.1.0] — 2026-04-16
 
 ### Added

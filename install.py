@@ -71,6 +71,7 @@ VERIFY_PY  = REPO_ROOT / "scripts" / "verify.py"
 HOME       = pathlib.Path.home()
 SETTINGS   = HOME / ".claude" / "settings.json"
 CC_CONFIG  = HOME / ".claude.json"
+HOOKS_DIR  = HOME / ".claude" / "hooks"
 
 
 # ── Load verify.py as a module ─────────────────────────────────────────────────
@@ -86,21 +87,57 @@ def _load_verify():
     return mod
 
 
+# ── Run a command quietly; dump captured output only on failure ────────────────
+def _run(cmd: list[str], cwd: str | None = None) -> int:
+    result = subprocess.run(
+        cmd, cwd=cwd,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if result.returncode != 0 and result.stdout.strip():
+        print()
+        print(dim("  " + "─" * 46))
+        for line in result.stdout.rstrip().splitlines():
+            print(f"  {line}")
+        print(dim("  " + "─" * 46))
+    return result.returncode
+
+
 # ── Prerequisite checks ────────────────────────────────────────────────────────
 def check_prereqs() -> list[str]:
+    """
+    Check Python, Node.js, and Claude Code.
+    - Node.js missing: print platform-specific install command.
+    - Claude Code missing: offer to install via npm.
+    Returns a list of failure strings for anything that could not be resolved.
+    """
     failures = []
 
-    # Python 3.10+ (we're already running, but double-check)
+    # Python 3.10+ (already running, but guard against marginal cases)
     if sys.version_info < (3, 10):
         failures.append(
-            f"Python 3.10+ required (found {sys.version.split()[0]}) — "
-            "https://python.org/downloads"
+            f"Python 3.10+ required (found {sys.version.split()[0]})\n"
+            "    Download: https://python.org/downloads"
         )
+    else:
+        _ok(f"Python {sys.version.split()[0]}")
 
     # Node.js 18+
     node = shutil.which("node")
     if not node:
-        failures.append("Node.js 18+ not found — https://nodejs.org")
+        if sys.platform == "win32":
+            hint = "winget install OpenJS.NodeJS"
+        elif sys.platform == "darwin":
+            hint = "brew install node"
+        else:
+            hint = "sudo apt install nodejs   # or use nvm: https://github.com/nvm-sh/nvm"
+        failures.append(
+            f"Node.js 18+ not found\n"
+            f"    Install: {hint}\n"
+            "    Then re-run install.py"
+        )
+        # Can't check npm / claude without node — return early
+        return failures
     else:
         try:
             out = subprocess.check_output(
@@ -109,17 +146,49 @@ def check_prereqs() -> list[str]:
             major = int(out.lstrip("v").split(".")[0])
             if major < 18:
                 failures.append(
-                    f"Node.js 18+ required (found {out}) — https://nodejs.org"
+                    f"Node.js 18+ required (found {out})\n"
+                    "    Download: https://nodejs.org"
                 )
+                return failures
+            else:
+                _ok(f"Node.js {out}")
         except (ValueError, subprocess.SubprocessError):
             failures.append("Could not determine Node.js version — https://nodejs.org")
+            return failures
 
-    # claude CLI
+    # Claude Code CLI — offer to install if missing
     if not shutil.which("claude"):
-        failures.append(
-            "Claude Code CLI not found — https://claude.ai/code\n"
-            "    (The 'claude' command must be on your PATH)"
-        )
+        _warn("Claude Code CLI not found")
+        try:
+            reply = input("  Install it now via npm? [Y/n]: ").strip().lower()
+        except KeyboardInterrupt:
+            print()
+            reply = "n"
+        if reply in ("", "y", "yes"):
+            npm = shutil.which("npm")
+            if not npm:
+                failures.append(
+                    "npm not found — Node.js should include it\n"
+                    "    Try reinstalling Node.js: https://nodejs.org"
+                )
+            else:
+                _step("npm install -g @anthropic-ai/claude-code")
+                code = _run([npm, "install", "-g", "@anthropic-ai/claude-code"])
+                if code != 0:
+                    failures.append(
+                        "Claude Code install failed — see output above\n"
+                        "    Install manually: https://claude.ai/code"
+                    )
+                else:
+                    _ok("Claude Code CLI installed")
+        else:
+            failures.append(
+                "Claude Code CLI required\n"
+                "    Install: npm install -g @anthropic-ai/claude-code\n"
+                "    Or visit: https://claude.ai/code"
+            )
+    else:
+        _ok("Claude Code CLI")
 
     return failures
 
@@ -154,10 +223,8 @@ def is_context_mode_complete(v) -> bool:
     ])
 
 
-# ── Run a shell command, stream output ────────────────────────────────────────
-def _run(cmd: list[str], cwd: str | None = None) -> int:
-    result = subprocess.run(cmd, cwd=cwd)
-    return result.returncode
+def is_hardgate_complete(v) -> bool:
+    return v.check_hardgate_artifacts(SETTINGS, HOOKS_DIR)["ok"]
 
 
 # ── Context-Mode discovery ─────────────────────────────────────────────────────
@@ -232,38 +299,14 @@ def install_longhand() -> bool:
     return True
 
 
-def install_context_mode() -> bool:
+def install_context_mode(ctx_dir: pathlib.Path) -> bool:
     _header("Context-Mode  (context layer)")
-
-    ctx_dir = _find_context_mode_dir()
-
-    if ctx_dir is None:
-        _warn("context-mode not found in ~/.claude/plugins/cache or $HOME (depth 3)")
-        print()
-        reply = input("  Clone scottconverse/context-mode now? [Y/n]: ").strip().lower()
-        if reply in ("", "y", "yes"):
-            clone_target = HOME / ".claude" / "plugins" / "context-mode"
-            _step(f"git clone → {clone_target}")
-            code = _run([
-                "git", "clone",
-                "https://github.com/scottconverse/context-mode",
-                str(clone_target),
-            ])
-            if code != 0:
-                _fail("Clone failed — install context-mode manually and re-run.")
-                return False
-            ctx_dir = clone_target
-        else:
-            _warn("Skipping context-mode — install manually and re-run.")
-            return False
-
     print(f"  {dim('using')} {ctx_dir}")
     _step("node install.js")
     code = _run(["node", "install.js"], cwd=str(ctx_dir))
     if code != 0:
         _fail("node install.js failed — see output above")
         return False
-
     _ok("Context-Mode installed")
     return True
 
@@ -271,13 +314,13 @@ def install_context_mode() -> bool:
 def install_hardgate() -> None:
     _header("Hardgate  (enforcement layer)")
     print(f"""
-  {yellow('Hardgate cannot be fully automated.')} It requires the /hard-gate skill
-  inside an active Claude Code session.
+  {yellow('Hardgate cannot be fully automated.')} It requires the /hard-gate
+  skill inside an active Claude Code session.
 
   {bold('Steps:')}
-    1. Open Claude Code  (or use an existing session)
+    1. Open a new terminal and start Claude Code:  {bold('claude')}
     2. Type:  {bold('/hard-gate')}
-    3. Select  {bold('context-mode')}  as the enforcement target
+    3. Follow the prompts to choose which tools to enforce
     4. Wait for it to complete
     5. Come back here and press Enter
 
@@ -311,7 +354,7 @@ def main() -> None:
         sys.exit(v.run())
 
     # Banner
-    print(f"\n{bold('Stack Installer')}  {dim('v1.1.0')}")
+    print(f"\n{bold('Stack Installer')}  {dim('v1.1.1')}")
     print(dim("github.com/scottconverse/stack"))
     print(dim("Installs Longhand · Context-Mode · Hardgate\n"))
 
@@ -325,9 +368,36 @@ def main() -> None:
             _fail(f)
         print(red("\n  Fix the issues above, then re-run install.py"))
         sys.exit(1)
-    _ok(f"Python {sys.version.split()[0]}")
-    _ok("Node.js  ✓")
-    _ok("Claude Code CLI  ✓")
+
+    # Context-Mode discovery — done here so the user sees all "missing piece"
+    # prompts before installation starts, not mid-flow as a surprise.
+    ctx_dir = _find_context_mode_dir()
+    if ctx_dir is None:
+        print()
+        _warn("Context-Mode not found in plugin cache or home directory")
+        try:
+            reply = input("  Clone scottconverse/context-mode now? [Y/n]: ").strip().lower()
+        except KeyboardInterrupt:
+            print()
+            reply = "n"
+        if reply in ("", "y", "yes"):
+            clone_target = HOME / ".claude" / "plugins" / "context-mode"
+            _step(f"git clone → {clone_target}")
+            code = _run([
+                "git", "clone",
+                "https://github.com/scottconverse/context-mode",
+                str(clone_target),
+            ])
+            if code != 0:
+                _fail("Clone failed — install context-mode manually and re-run")
+                sys.exit(1)
+            ctx_dir = clone_target
+            _ok(f"Context-Mode cloned")
+        else:
+            _fail("Context-Mode required — clone manually and re-run")
+            sys.exit(1)
+    else:
+        _ok(f"Context-Mode found")
 
     # Backup
     _header("Config backup")
@@ -346,11 +416,15 @@ def main() -> None:
         _header("Context-Mode  (context layer)")
         _ok("Fully installed — skipping")
     else:
-        if not install_context_mode():
+        if not install_context_mode(ctx_dir):
             sys.exit(1)
 
     # Hardgate
-    install_hardgate()
+    if is_hardgate_complete(v):
+        _header("Hardgate  (enforcement layer)")
+        _ok("Fully installed — skipping")
+    else:
+        install_hardgate()
 
     # Verification
     _header("Verification")

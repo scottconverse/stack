@@ -17,7 +17,7 @@ uses bash syntax throughout.
 pytest tests/ -v
 ```
 
-All 29 tests must pass before submitting a PR.
+All 50 tests must pass before submitting a PR.
 
 ## Architecture
 

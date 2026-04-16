@@ -17,7 +17,7 @@ Hey — Scott here. Thanks for checking this out.
 
 So I built a single skill that does all of it in the right order, with timestamped config backups, per-tool idempotency checks, and a post-install verifier that tells you exactly what passed and what to retry.
 
-**Current state (v1.1.1):** Install-only, three tools, 75 tests, verified on Python 3.14.3 and Node 18+. Two install paths: `python install.py` (standalone, no active Claude Code session needed) and `/stack` (Claude Code skill). The verifier checks config wiring but not live MCP server health — `longhand doctor` and `claude mcp list` are still the runtime truth.
+**Current state (v1.1.4):** Install-only, three tools, 75 tests, requires Python 3.10–3.13 (3.14+ not supported — ChromaDB incompatibility) and Node 18+. Two install paths: `python install.py` (standalone, no active Claude Code session needed) and `/stack` (Claude Code skill). The verifier checks config wiring but not live MCP server health — `longhand doctor` and `claude mcp list` are still the runtime truth.
 
 **What's coming:** Uninstall support, richer verifier output, and possibly support for additional tools in the stack. Nothing is on a hard timeline — this is a tool I use myself, and I ship when it's ready.
 

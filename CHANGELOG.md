@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
+## [1.1.4] — 2026-04-16
+
+### Fixed
+- `install.py`: Python 3.14+ blocked at startup with an actionable error message;
+  ChromaDB's native layer is incompatible with Python 3.14+
+- `install.py` `main()`: `PYTHONUTF8=1` set via `os.environ.setdefault` before
+  any subprocess is spawned — prevents `UnicodeEncodeError` on Windows CP1252
+  consoles when longhand's rich output contains box-drawing characters
+- `install.py` `_find_context_mode_dir()`: plugin cache excluded from search —
+  running `node install.js` from the cache (src == dest) silently corrupted
+  the install; cache presence is now detected via `is_context_mode_complete()`
+- `install.py` `main()`: when Context-Mode is already installed via the plugin
+  system but no external source directory exists, the installer now skips
+  correctly instead of prompting to clone or exiting with an error
+- `install.py` `_dedup_hooks()`: duplicate hook entries produced by repeated
+  `longhand setup` runs are now removed from `settings.json` automatically
+
+### Added
+- README.md: Python 3.14 removed from tested-versions table; requirement
+  clarified as Python 3.10–3.13
+
 ## [1.1.2] — 2026-04-16
 
 ### Fixed

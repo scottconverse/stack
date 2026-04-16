@@ -137,7 +137,7 @@ Here is what happens from the moment you send a message to Claude through to the
 ### Before you start
 
 You need:
-- **Python 3.10 or newer** — check by running `python --version` in your terminal
+- **Python 3.10–3.13** — check by running `python --version` in your terminal (Python 3.14+ is not supported — ChromaDB, used by Longhand, is incompatible with it)
 - **Node.js 18 or newer** — check by running `node --version` in your terminal
 - **Claude Code** installed (the command-line tool from Anthropic)
 - **The stack repo cloned to your computer** — see below
@@ -234,6 +234,15 @@ The installer checks your Python version before starting. If it reports Python i
 - **Linux:** Run `sudo apt install python3` or the equivalent for your distribution.
 
 After installing, open a new terminal window and run `python --version` to confirm the version, then retry.
+
+### `install.py` says Python 3.14+ is not supported
+
+Longhand uses ChromaDB, which has a native extension that is incompatible with Python 3.14+. You need Python 3.10–3.13.
+
+- **Windows:** Install Python 3.13 from [python.org/downloads](https://python.org/downloads), then re-run with: `py -3.13 install.py`
+- **macOS/Linux:** Use pyenv to install 3.13: `pyenv install 3.13 && pyenv local 3.13`
+
+Python 3.14 support depends on ChromaDB releasing a compatible version. Check [github.com/chroma-core/chroma](https://github.com/chroma-core/chroma) for updates.
 
 ### `install.py` fails partway through
 

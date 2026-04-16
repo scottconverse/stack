@@ -182,12 +182,14 @@ def test_is_context_mode_install_js_handles_missing_file(tmp_path):
 
 # ── _find_context_mode_dir() ───────────────────────────────────────────────────
 
-def test_find_context_mode_dir_finds_plugin_cache(tmp_path, monkeypatch):
+def test_find_context_mode_dir_excludes_plugin_cache(tmp_path, monkeypatch):
+    # Cache is intentionally excluded — running install.js from src==dest corrupts the install.
+    # Cache presence is detected separately via is_context_mode_complete().
     cache = tmp_path / ".claude" / "plugins" / "cache" / "context-mode"
     cache.mkdir(parents=True)
     (cache / "install.js").write_text(CTX_JS_CONTENT)
     monkeypatch.setattr(install, "HOME", tmp_path)
-    assert install._find_context_mode_dir() == cache
+    assert install._find_context_mode_dir() is None
 
 
 def test_find_context_mode_dir_finds_at_depth2(tmp_path, monkeypatch):
@@ -240,8 +242,8 @@ def test_find_context_mode_dir_ignores_install_js_without_matching_content(tmp_p
     assert install._find_context_mode_dir() is None
 
 
-def test_find_context_mode_dir_prefers_plugin_cache_over_home_walk(tmp_path, monkeypatch):
-    # Both cache and home-walk match — cache should win (checked first)
+def test_find_context_mode_dir_returns_home_walk_when_cache_also_present(tmp_path, monkeypatch):
+    # Cache is excluded — home-walk result wins even when cache also exists.
     cache = tmp_path / ".claude" / "plugins" / "cache" / "context-mode"
     cache.mkdir(parents=True)
     (cache / "install.js").write_text(CTX_JS_CONTENT)
@@ -251,7 +253,7 @@ def test_find_context_mode_dir_prefers_plugin_cache_over_home_walk(tmp_path, mon
     (other / "install.js").write_text(CTX_JS_CONTENT)
 
     monkeypatch.setattr(install, "HOME", tmp_path)
-    assert install._find_context_mode_dir() == cache
+    assert install._find_context_mode_dir() == other
 
 
 def test_find_context_mode_dir_accepts_underscore_naming(tmp_path, monkeypatch):

@@ -82,7 +82,7 @@ versions is untested.
 |------|---------------|
 | Longhand | 0.5.5 |
 | Context-Mode | 1.6.0 |
-| Python | 3.14.3 (pre-release; 3.10+ supported) |
+| Python | 3.10–3.13 required (3.14+ not supported) |
 | Node.js | 18+ |
 
 Pin Longhand if you need a reproducible install:

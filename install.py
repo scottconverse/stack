@@ -11,15 +11,24 @@ Usage:
 """
 from __future__ import annotations
 
-__version__ = "1.1.2"
+__version__ = "1.1.4"
 
 import importlib.util
+import json
 import os
 import pathlib
 import shutil
 import subprocess
 import sys
 import datetime
+
+if sys.version_info >= (3, 14):
+    print(
+        "Error: Python 3.14+ is not supported.\n"
+        "ChromaDB's native layer (used by Longhand) is incompatible with Python 3.14+.\n"
+        "Re-run with Python 3.10–3.13:  py -3.13 install.py"
+    )
+    sys.exit(1)
 
 
 # ── Terminal colour helpers ────────────────────────────────────────────────────
@@ -267,15 +276,10 @@ def _is_context_mode_install_js(path: pathlib.Path) -> bool:
 
 # ── Context-Mode discovery ─────────────────────────────────────────────────────
 def _find_context_mode_dir() -> pathlib.Path | None:
-    # 1. Plugin cache — highest confidence, check first
-    cache = HOME / ".claude" / "plugins" / "cache"
-    if cache.exists():
-        for p in cache.rglob("install.js"):
-            if ("context-mode" in str(p) or "context_mode" in str(p)) \
-                    and _is_context_mode_install_js(p):
-                return p.parent
+    # Do NOT search the plugin cache — install.js fails when src == dest.
+    # Cache presence is detected separately via is_context_mode_complete().
 
-    # 2. Bounded Python-native walk (cross-platform — no 'find' dependency).
+    # Bounded Python-native walk (cross-platform — no 'find' dependency).
     # Skips common system/tool directories that will never contain Context-Mode.
     for depth1 in HOME.iterdir():
         try:
@@ -386,8 +390,39 @@ def restore_configs(ts: str) -> None:
             _warn(f"No backup found for {src_name} (was not present before install)")
 
 
+# ── Hook deduplication ────────────────────────────────────────────────────────
+def _dedup_hooks() -> None:
+    """Remove duplicate hook entries added by repeated longhand setup runs."""
+    if not SETTINGS.exists():
+        return
+    try:
+        data = json.loads(SETTINGS.read_text())
+    except (json.JSONDecodeError, OSError):
+        return
+    hooks = data.get("hooks", {})
+    changed = False
+    for event, entries in hooks.items():
+        seen = []
+        deduped = []
+        for entry in entries:
+            key = json.dumps(entry, sort_keys=True)
+            if key not in seen:
+                seen.append(key)
+                deduped.append(entry)
+        if len(deduped) != len(entries):
+            hooks[event] = deduped
+            changed = True
+    if changed:
+        SETTINGS.write_text(json.dumps(data, indent=2))
+        _ok("Deduplicated hook entries in settings.json")
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 def main() -> None:
+    # Ensure Unicode output works on Windows consoles with narrow codepages (e.g. CP1252).
+    # longhand's rich-based output prints → and box-drawing chars that CP1252 can't encode.
+    os.environ.setdefault("PYTHONUTF8", "1")
+
     # Verify-only mode
     if "--verify" in sys.argv:
         v = _load_verify()
@@ -413,31 +448,35 @@ def main() -> None:
     # prompts before installation starts, not mid-flow as a surprise.
     ctx_dir = _find_context_mode_dir()
     if ctx_dir is None:
-        print()
-        _warn("Context-Mode not found in plugin cache or home directory")
-        try:
-            reply = input("  Clone scottconverse/context-mode now? [Y/n]: ").strip().lower()
-        except KeyboardInterrupt:
-            print()
-            reply = "n"
-        if reply in ("", "y", "yes"):
-            clone_target = HOME / ".claude" / "plugins" / "context-mode"
-            _step(f"git clone → {clone_target}")
-            code = _run([
-                "git", "clone",
-                "https://github.com/scottconverse/context-mode",
-                str(clone_target),
-            ])
-            if code != 0:
-                _fail("Clone failed — install context-mode manually and re-run")
-                sys.exit(1)
-            ctx_dir = clone_target
-            _ok(f"Context-Mode cloned")
+        if is_context_mode_complete(v):
+            # Already installed via plugin system — no source dir needed
+            _ok("Context-Mode found (plugin system)")
         else:
-            _fail("Context-Mode required — clone manually and re-run")
-            sys.exit(1)
+            print()
+            _warn("Context-Mode not found in home directory")
+            try:
+                reply = input("  Clone scottconverse/context-mode now? [Y/n]: ").strip().lower()
+            except KeyboardInterrupt:
+                print()
+                reply = "n"
+            if reply in ("", "y", "yes"):
+                clone_target = HOME / ".claude" / "plugins" / "context-mode"
+                _step(f"git clone → {clone_target}")
+                code = _run([
+                    "git", "clone",
+                    "https://github.com/scottconverse/context-mode",
+                    str(clone_target),
+                ])
+                if code != 0:
+                    _fail("Clone failed — install context-mode manually and re-run")
+                    sys.exit(1)
+                ctx_dir = clone_target
+                _ok("Context-Mode cloned")
+            else:
+                _fail("Context-Mode required — clone manually and re-run")
+                sys.exit(1)
     else:
-        _ok(f"Context-Mode found")
+        _ok("Context-Mode found")
 
     # Backup
     _header("Config backup")
@@ -450,11 +489,16 @@ def main() -> None:
     else:
         if not install_longhand():
             sys.exit(1)
+    _dedup_hooks()
 
     # Context-Mode
     if is_context_mode_complete(v):
         _header("Context-Mode  (context layer)")
         _ok("Fully installed — skipping")
+    elif ctx_dir is None:
+        _header("Context-Mode  (context layer)")
+        _fail("No source directory found. Clone context-mode manually and re-run.")
+        sys.exit(1)
     else:
         if not install_context_mode(ctx_dir):
             sys.exit(1)

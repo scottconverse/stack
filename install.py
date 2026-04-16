@@ -89,11 +89,16 @@ def _load_verify():
 
 # ── Run a command quietly; dump captured output only on failure ────────────────
 def _run(cmd: list[str], cwd: str | None = None) -> int:
-    result = subprocess.run(
-        cmd, cwd=cwd,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            cmd, cwd=cwd,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True,
+        )
+    except FileNotFoundError:
+        print()
+        _fail(f"command not found: {cmd[0]}")
+        return 127  # standard shell exit code for "command not found"
     if result.returncode != 0 and result.stdout.strip():
         print()
         print(dim("  " + "─" * 46))
@@ -224,7 +229,10 @@ def is_context_mode_complete(v) -> bool:
 
 
 def is_hardgate_complete(v) -> bool:
-    return v.check_hardgate_artifacts(SETTINGS, HOOKS_DIR)["ok"]
+    try:
+        return v.check_hardgate_artifacts(SETTINGS, HOOKS_DIR)["ok"]
+    except (NotADirectoryError, OSError):
+        return False
 
 
 # ── Context-Mode discovery ─────────────────────────────────────────────────────

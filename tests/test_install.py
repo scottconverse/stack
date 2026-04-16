@@ -265,3 +265,84 @@ def test_find_context_mode_dir_prefers_plugin_cache_over_home_walk(tmp_path, mon
 
     monkeypatch.setattr(install, "HOME", tmp_path)
     assert install._find_context_mode_dir() == cache
+
+
+def test_find_context_mode_dir_accepts_underscore_naming(tmp_path, monkeypatch):
+    # context_mode (underscore) is an alternative naming convention
+    d = tmp_path / "projects" / "context_mode"
+    d.mkdir(parents=True)
+    (d / "install.js").write_text("// install")
+    monkeypatch.setattr(install, "HOME", tmp_path)
+    assert install._find_context_mode_dir() == d
+
+
+def test_find_context_mode_dir_does_not_find_depth4(tmp_path, monkeypatch):
+    # depth 4 is beyond the search limit — must return None
+    deep = tmp_path / "a" / "b" / "c" / "context-mode"
+    deep.mkdir(parents=True)
+    (deep / "install.js").write_text("// install")
+    monkeypatch.setattr(install, "HOME", tmp_path)
+    assert install._find_context_mode_dir() is None
+
+
+# ── Adversarial: _run() ────────────────────────────────────────────────────────
+
+def test_run_nonexistent_command_returns_127():
+    """FileNotFoundError must not propagate — returns 127 (command not found)."""
+    code = install._run(["nonexistent-binary-xyz-abc-123"])
+    assert code == 127
+
+
+def test_run_nonexistent_command_prints_error(capsys):
+    install._run(["nonexistent-binary-xyz-abc-123"])
+    out = capsys.readouterr().out
+    assert "not found" in out.lower() or "nonexistent" in out.lower()
+
+
+def test_run_exits_nonzero_even_when_output_is_empty():
+    """Silent failures (no stdout) still return non-zero exit code."""
+    code = install._run([sys.executable, "-c", "import sys; sys.exit(2)"])
+    assert code == 2
+
+
+# ── Adversarial: idempotency helpers with malformed JSON ──────────────────────
+
+def test_longhand_complete_returns_false_on_malformed_settings(tmp_path, monkeypatch):
+    bad = tmp_path / "settings.json"
+    bad.write_text("{ not valid json }")
+    cc = make_cc_config(tmp_path)
+    monkeypatch.setattr(install, "SETTINGS", bad)
+    monkeypatch.setattr(install, "CC_CONFIG", cc)
+    with patch("shutil.which", return_value="/usr/bin/longhand"):
+        assert install.is_longhand_complete(verify) is False
+
+
+def test_context_mode_complete_returns_false_on_malformed_settings(tmp_path, monkeypatch):
+    bad = tmp_path / "settings.json"
+    bad.write_text("{ not valid json }")
+    cc = make_cc_config(tmp_path)
+    monkeypatch.setattr(install, "SETTINGS", bad)
+    monkeypatch.setattr(install, "CC_CONFIG", cc)
+    assert install.is_context_mode_complete(verify) is False
+
+
+def test_hardgate_complete_returns_false_on_malformed_settings(tmp_path, monkeypatch):
+    bad = tmp_path / "settings.json"
+    bad.write_text("{ not valid json }")
+    hooks_dir = make_hooks_dir(tmp_path, {"enforce.sh": HARDGATE_CONTENT})
+    monkeypatch.setattr(install, "SETTINGS", bad)
+    monkeypatch.setattr(install, "HOOKS_DIR", hooks_dir)
+    assert install.is_hardgate_complete(verify) is False
+
+
+# ── Adversarial: is_hardgate_complete() with bad HOOKS_DIR ────────────────────
+
+def test_hardgate_complete_returns_false_when_hooks_dir_is_a_file(tmp_path, monkeypatch):
+    """HOOKS_DIR pointing to a file must not raise NotADirectoryError."""
+    file_not_dir = tmp_path / "hooks"
+    file_not_dir.write_text("I am a file, not a directory")
+    s = make_settings(tmp_path)
+    monkeypatch.setattr(install, "SETTINGS", s)
+    monkeypatch.setattr(install, "HOOKS_DIR", file_not_dir)
+    # Must return False cleanly — no exception
+    assert install.is_hardgate_complete(verify) is False

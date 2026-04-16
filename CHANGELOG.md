@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
+## [1.1.2] — 2026-04-16
+
+### Fixed
+- `install.py`: version defined once as `__version__` constant; banner and
+  docstring now reference it — eliminates version drift on every release
+- `verify.py` `_command_str()`: now handles string-format hook entries
+  (previously silently returned `""`, causing missed matches)
+- `verify.py` `print_report()`: warning-branch condition made explicit
+  (`r.get("warn")`) so logic does not rely on implicit ordering
+- `verify.py`: stale Hardgate fix message ("select context-mode as the
+  enforcement target") replaced with neutral "follow the prompts" wording
+- `install.py` `_find_context_mode_dir()`: content validation added —
+  `install.js` must reference "context-mode" or "context_mode" to match;
+  prevents false positives from unrelated projects named context-mode
+- `install.py` `_find_context_mode_dir()`: exclusion list skips common
+  system/tool directories (`.cargo`, `.npm`, `AppData`, `Library`, etc.)
+  for significantly faster discovery on developer machines
+- `install.py` `is_hardgate_complete()`: exception handling broadened to
+  catch `TypeError`, `AttributeError`, and other unexpected errors from
+  malformed hook data — not only `NotADirectoryError` and `OSError`
+- `install.py` `_run()`: `cwd` type annotation corrected to
+  `str | Path | None` (was `str | None`)
+- `CONTRIBUTING.md`: test count corrected (was "50", then "59"; now 75)
+
+### Added
+- `tests/conftest.py`: shared fixtures extracted from both test files —
+  eliminates duplication that was a maintenance hazard
+- 16 new tests: `_is_context_mode_install_js()` (4), `backup_configs()` (3),
+  `restore_configs()` (2), `--verify` flag (1), `_command_str()` string
+  format (3), Hardgate fix message wording (1), string-format hook
+  recognition in `check_longhand_session_end` (1), content-validation
+  rejection in `_find_context_mode_dir` (1)
+- Total test count: 59 → 75
+
 ## [1.1.1] — 2026-04-16
 
 ### Fixed

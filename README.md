@@ -1,4 +1,4 @@
-# stack · v1.1.1
+# stack · v1.1.2
 
 **One skill to install them all.**
 
@@ -12,7 +12,7 @@ guards, and a hardened post-install verification checklist.
 
 - Python 3.10+
 - Node.js 18+
-- Claude Code CLI (`claude` on PATH)
+- Claude Code CLI (`claude` on PATH) — the standalone installer will offer to install this via npm if missing
 - The full `stack` repo cloned locally
 
 ## Install
@@ -82,7 +82,7 @@ versions is untested.
 |------|---------------|
 | Longhand | 0.5.5 |
 | Context-Mode | 1.6.0 |
-| Python | 3.14.3 |
+| Python | 3.14.3 (pre-release; 3.10+ supported) |
 | Node.js | 18+ |
 
 Pin Longhand if you need a reproducible install:
@@ -107,7 +107,7 @@ pip install pytest
 pytest tests/ -v
 ```
 
-59 tests covering all verifier logic, exit codes, and installer behaviour.
+75 tests covering all verifier logic, exit codes, and installer behaviour.
 
 ## License
 

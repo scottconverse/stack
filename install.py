@@ -343,7 +343,7 @@ def install_context_mode(ctx_dir: pathlib.Path) -> bool:
     _header("Context-Mode  (context layer)")
     print(f"  {dim('using')} {ctx_dir}")
     _step("node install.js")
-    code = _run(["node", "install.js"], cwd=str(ctx_dir))
+    code = _run(["node", "install.js"], cwd=ctx_dir)
     if code != 0:
         _fail("node install.js failed — see output above")
         return False

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>stack — One skill to install them all</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --accent:    #58a6ff;
+      --green:     #3fb950;
+      --yellow:    #d29922;
+      --orange:    #f0883e;
+      --purple:    #bc8cff;
+      --radius:    8px;
+      --max:       900px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .container { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 80px 0 64px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero .badge {
+      display: inline-block;
+      background: #1f3a5f;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid #2d5a8e;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 52px);
+      font-weight: 700;
+      letter-spacing: -.02em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    .hero h1 code {
+      color: var(--accent);
+      background: #1c2d40;
+      padding: 2px 10px;
+      border-radius: 6px;
+      font-size: .9em;
+    }
+    .hero .subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto 32px;
+    }
+    .hero .cta-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+    /* ── Code block ── */
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+      text-align: left;
+    }
+    .code-block .prompt { color: var(--muted); user-select: none; }
+    .code-block .cmd    { color: var(--green); }
+    .code-block .arg    { color: var(--text); }
+    .code-block .comment{ color: var(--muted); font-style: italic; }
+
+    /* ── Sections ── */
+    section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+    section:last-child { border-bottom: none; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    h2 {
+      font-size: clamp(22px, 4vw, 30px);
+      font-weight: 700;
+      letter-spacing: -.01em;
+      margin-bottom: 16px;
+    }
+    .lead {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 640px;
+      margin-bottom: 40px;
+    }
+
+    /* ── Tool cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 14px;
+    }
+    .card-icon.green  { background: #0d2b1a; }
+    .card-icon.blue   { background: #0d1f36; }
+    .card-icon.orange { background: #2b1a0d; }
+    .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .card p  { font-size: 14px; color: var(--muted); line-height: 1.55; }
+    .card .tag {
+      display: inline-block;
+      margin-top: 14px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .tag-green  { background: #0d2b1a; color: var(--green); }
+    .tag-blue   { background: #0d1f36; color: var(--accent); }
+    .tag-orange { background: #2b1a0d; color: var(--orange); }
+
+    /* ── Architecture diagram ── */
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+    }
+    .arch-diagram svg { max-width: 100%; }
+
+    /* ── Flow diagram ── */
+    .flow-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      margin-top: 32px;
+    }
+
+    /* ── Feature table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th {
+      text-align: left;
+      padding: 10px 16px;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    td:first-child { font-weight: 600; color: var(--accent); white-space: nowrap; }
+
+    /* ── Quick start steps ── */
+    .steps { counter-reset: step; }
+    .step {
+      display: flex;
+      gap: 20px;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #1c2d40;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-body h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .step-body p  { font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+    .step-body .code-block { margin-top: 8px; }
+
+    /* ── Limitation callout ── */
+    .callout {
+      background: #1a1500;
+      border: 1px solid #4a3800;
+      border-left: 4px solid var(--yellow);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 14px;
+    }
+    .callout strong { color: var(--yellow); }
+
+    /* ── Footer ── */
+    footer {
+      padding: 40px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+    .footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<div class="hero">
+  <div class="container">
+    <div class="badge">Claude Code · Open Source</div>
+    <h1>One skill to<br>install them all.</h1>
+    <p class="subtitle">
+      <code>/stack</code> installs Longhand, Context-Mode, and Hardgate as a
+      coordinated Claude Code stack — with timestamped config backup,
+      per-tool idempotency, and a hardened post-install verification checklist.
+    </p>
+    <div class="cta-row">
+      <a href="https://github.com/scottconverse/stack" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        View on GitHub
+      </a>
+      <a href="USER-MANUAL.md" class="btn btn-secondary">User Manual</a>
+      <a href="../CONTRIBUTING.md" class="btn btn-secondary">Contributing</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ WHAT IT INSTALLS ══════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">The Stack</div>
+    <h2>Three tools. One coordinated install.</h2>
+    <p class="lead">
+      Each tool solves a different problem with Claude Code. Together they give you
+      persistent memory, a clean context window, and hard enforcement — all wired
+      together correctly from the start.
+    </p>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon green">🧠</div>
+        <h3>Longhand</h3>
+        <p>Stores every session verbatim in SQLite + ChromaDB. Semantic recall in ~126ms. Claude remembers past conversations, decisions, and code changes — zero API cost.</p>
+        <span class="tag tag-green">Memory Layer</span>
+      </div>
+      <div class="card">
+        <div class="card-icon blue">🔲</div>
+        <h3>Context-Mode</h3>
+        <p>Sandboxes tool output. Raw command results are processed outside the context window. Sessions run longer. Claude stops forgetting earlier parts of the conversation.</p>
+        <span class="tag tag-blue">Context Layer</span>
+      </div>
+      <div class="card">
+        <div class="card-icon orange">🔒</div>
+        <h3>Hardgate</h3>
+        <p>Blocks forbidden tool calls via <code style="font-size:12px;color:var(--orange)">exit 2</code> hooks. Claude cannot push to GitHub, delete files, or run migrations without your explicit approval.</p>
+        <span class="tag tag-orange">Enforcement Layer</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ ARCHITECTURE ══════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">Architecture</div>
+    <h2>How the layers interact</h2>
+    <p class="lead">
+      Each tool hooks into a different Claude Code event. They operate independently
+      at runtime — a misconfigured layer doesn't break the others.
+    </p>
+
+    <!-- Layer diagram -->
+    <div class="arch-diagram">
+      <svg width="780" height="320" viewBox="0 0 780 320" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+
+        <!-- Background lanes -->
+        <rect x="10" y="10" width="760" height="60" rx="6" fill="#1a1500" stroke="#4a3800" stroke-width="1"/>
+        <rect x="10" y="80" width="760" height="60" rx="6" fill="#0d1f36" stroke="#2d5a8e" stroke-width="1"/>
+        <rect x="10" y="150" width="760" height="60" rx="6" fill="#0d2b1a" stroke="#1e5c38" stroke-width="1"/>
+        <rect x="10" y="220" width="760" height="60" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+
+        <!-- Lane labels -->
+        <text x="30" y="46" fill="#d29922" font-size="13" font-weight="700">🔒  Hardgate</text>
+        <text x="30" y="116" fill="#58a6ff" font-size="13" font-weight="700">🔲  Context-Mode</text>
+        <text x="30" y="186" fill="#3fb950" font-size="13" font-weight="700">🧠  Longhand</text>
+        <text x="30" y="256" fill="#8b949e" font-size="13" font-weight="700">⚙️  Claude Code Core</text>
+
+        <!-- Lane hook descriptions -->
+        <text x="200" y="35" fill="#8b949e" font-size="11">PreToolUse hook — exit 2 blocks forbidden tools before they run</text>
+        <text x="200" y="105" fill="#8b949e" font-size="11">PreToolUse hook — sandboxes output; feeds Claude a clean summary</text>
+        <text x="200" y="175" fill="#8b949e" font-size="11">SessionEnd hook + UserPromptSubmit hook — saves and recalls sessions</text>
+        <text x="200" y="245" fill="#8b949e" font-size="11">Runs tools, manages context window, dispatches hooks in order</text>
+
+        <!-- Request flow arrow -->
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#58a6ff"/>
+          </marker>
+        </defs>
+        <line x1="700" y1="40" x2="700" y2="280" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+        <text x="710" y="160" fill="#58a6ff" font-size="10" transform="rotate(90,710,160)">request flow</text>
+      </svg>
+    </div>
+
+    <!-- Component diagram -->
+    <div class="flow-diagram">
+      <svg width="720" height="200" viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+        <defs>
+          <marker id="fwd" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#30363d"/>
+          </marker>
+          <marker id="yes" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
+          </marker>
+          <marker id="no" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#f85149"/>
+          </marker>
+        </defs>
+
+        <!-- Nodes -->
+        <!-- User prompt -->
+        <rect x="10" y="80" width="110" height="40" rx="6" fill="#161b22" stroke="#30363d"/>
+        <text x="65" y="96" fill="#e6edf3" font-size="12" font-weight="600" text-anchor="middle">Your Prompt</text>
+        <text x="65" y="112" fill="#8b949e" font-size="10" text-anchor="middle">to Claude</text>
+
+        <!-- Hardgate -->
+        <rect x="160" y="80" width="110" height="40" rx="6" fill="#1a1500" stroke="#4a3800"/>
+        <text x="215" y="96" fill="#d29922" font-size="12" font-weight="600" text-anchor="middle">Hardgate</text>
+        <text x="215" y="112" fill="#8b949e" font-size="10" text-anchor="middle">PreToolUse</text>
+
+        <!-- Blocked exit -->
+        <rect x="160" y="160" width="110" height="36" rx="6" fill="#1a0d0d" stroke="#6e1a1a"/>
+        <text x="215" y="181" fill="#f85149" font-size="11" font-weight="600" text-anchor="middle">⛔ Blocked</text>
+
+        <!-- Context-Mode -->
+        <rect x="320" y="80" width="120" height="40" rx="6" fill="#0d1f36" stroke="#2d5a8e"/>
+        <text x="380" y="96" fill="#58a6ff" font-size="12" font-weight="600" text-anchor="middle">Context-Mode</text>
+        <text x="380" y="112" fill="#8b949e" font-size="10" text-anchor="middle">sandbox + summarise</text>
+
+        <!-- Tool runs -->
+        <rect x="490" y="80" width="100" height="40" rx="6" fill="#161b22" stroke="#30363d"/>
+        <text x="540" y="96" fill="#e6edf3" font-size="12" font-weight="600" text-anchor="middle">Tool Runs</text>
+        <text x="540" y="112" fill="#8b949e" font-size="10" text-anchor="middle">Bash, Read, …</text>
+
+        <!-- Longhand -->
+        <rect x="620" y="80" width="90" height="40" rx="6" fill="#0d2b1a" stroke="#1e5c38"/>
+        <text x="665" y="96" fill="#3fb950" font-size="12" font-weight="600" text-anchor="middle">Longhand</text>
+        <text x="665" y="112" fill="#8b949e" font-size="10" text-anchor="middle">saves session</text>
+
+        <!-- Arrows -->
+        <line x1="120" y1="100" x2="158" y2="100" stroke="#30363d" stroke-width="1.5" marker-end="url(#fwd)"/>
+        <!-- allowed -->
+        <line x1="270" y1="100" x2="318" y2="100" stroke="#3fb950" stroke-width="1.5" marker-end="url(#yes)"/>
+        <text x="294" y="94" fill="#3fb950" font-size="10" text-anchor="middle">allowed</text>
+        <!-- blocked -->
+        <line x1="215" y1="120" x2="215" y2="158" stroke="#f85149" stroke-width="1.5" marker-end="url(#no)"/>
+        <text x="230" y="147" fill="#f85149" font-size="10">blocked</text>
+        <!-- context to tool -->
+        <line x1="440" y1="100" x2="488" y2="100" stroke="#30363d" stroke-width="1.5" marker-end="url(#fwd)"/>
+        <!-- tool to longhand -->
+        <line x1="590" y1="100" x2="618" y2="100" stroke="#30363d" stroke-width="1.5" marker-end="url(#fwd)"/>
+      </svg>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-top:12px;text-align:center;">
+      <em>Figure: request flow through the three hook layers. Layers are independent — each hooks a different Claude Code event.</em>
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════ QUICK START ══════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">Quick Start</div>
+    <h2>Up and running in 4 steps</h2>
+    <p class="lead">Requires Python 3.10+, Node.js 18+, and a bash-compatible shell (Git Bash or WSL on Windows).</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Clone the repo</h3>
+          <p>The full repo must be present — do not copy just the skill file.</p>
+          <div class="code-block">
+            <span class="prompt">$ </span><span class="cmd">git clone</span> <span class="arg">https://github.com/scottconverse/stack</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Open a Claude Code session</h3>
+          <p>Start Claude Code in your terminal.</p>
+          <div class="code-block">
+            <span class="prompt">$ </span><span class="cmd">claude</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Run <code>/stack</code></h3>
+          <p>Claude guides you through the install. One interactive step is required for Hardgate — you choose which tools to enforce.</p>
+          <div class="code-block">
+            <span class="prompt">&gt; </span><span class="cmd">/stack</span>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Verify and restart</h3>
+          <p>After install, confirm runtime health and restart Claude Code.</p>
+          <div class="code-block">
+            <span class="prompt">$ </span><span class="cmd">longhand doctor</span><br>
+            <span class="prompt">$ </span><span class="cmd">claude mcp list</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ TECHNICAL SPECS ══════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">Technical Specs</div>
+    <h2>Under the hood</h2>
+    <p class="lead">Tested against these specific versions. Pin if you need reproducibility.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Tool</th>
+          <th>Tested version</th>
+          <th>Install method</th>
+          <th>Runtime hook</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Longhand</td>
+          <td>0.5.5</td>
+          <td><code>pip install longhand==0.5.5</code></td>
+          <td>SessionEnd, UserPromptSubmit</td>
+        </tr>
+        <tr>
+          <td>Context-Mode</td>
+          <td>1.6.0</td>
+          <td><code>node install.js</code> from local clone</td>
+          <td>PreToolUse (Bash, Read, WebFetch + 6 more)</td>
+        </tr>
+        <tr>
+          <td>Hardgate</td>
+          <td>—</td>
+          <td><code>/hard-gate</code> skill (interactive)</td>
+          <td>PreToolUse (exit 2), SessionStart</td>
+        </tr>
+        <tr>
+          <td>Python</td>
+          <td>3.14.3</td>
+          <td>Prerequisite</td>
+          <td>Powers Longhand + verify.py</td>
+        </tr>
+        <tr>
+          <td>Node.js</td>
+          <td>18+</td>
+          <td>Prerequisite</td>
+          <td>Powers Context-Mode install</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:28px">
+      <div class="callout">
+        <strong>Known limitation:</strong> The post-install verifier checks that config entries are <em>present</em> — not that MCP servers are <em>live</em>.
+        After install, always run <code>longhand doctor</code> and <code>claude mcp list</code> to verify runtime health.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ LINKS ══════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">Resources</div>
+    <h2>Everything you need</h2>
+    <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+      <a href="https://github.com/scottconverse/stack" class="card" style="display:block;text-decoration:none;">
+        <h3 style="color:var(--accent)">GitHub Repo</h3>
+        <p>Source code, issues, and pull requests.</p>
+      </a>
+      <a href="USER-MANUAL.md" class="card" style="display:block;text-decoration:none;">
+        <h3 style="color:var(--accent)">User Manual</h3>
+        <p>Plain-language guide to what each tool does and what to do when things go wrong.</p>
+      </a>
+      <a href="../CONTRIBUTING.md" class="card" style="display:block;text-decoration:none;">
+        <h3 style="color:var(--accent)">Contributing</h3>
+        <p>Dev setup, running tests, architecture notes, and commit style.</p>
+      </a>
+      <a href="../CHANGELOG.md" class="card" style="display:block;text-decoration:none;">
+        <h3 style="color:var(--accent)">Changelog</h3>
+        <p>What changed in each release.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ FOOTER ══════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-links">
+      <a href="https://github.com/scottconverse/stack">GitHub</a>
+      <a href="https://github.com/Wynelson94/longhand">Longhand</a>
+      <a href="https://github.com/scottconverse/context-mode">Context-Mode</a>
+      <a href="https://github.com/scottconverse/hardgate">Hardgate</a>
+      <a href="../LICENSE">MIT License</a>
+    </div>
+    <div>Released under the MIT License.</div>
+  </div>
+</footer>
+
+</body>
+</html>

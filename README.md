@@ -1,4 +1,4 @@
-# stack
+# stack · v1.0.0
 
 **One skill to install them all.**
 

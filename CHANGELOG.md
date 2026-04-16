@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] — 2026-04-16
+## [1.0.0] — 2026-04-16
 
 ### Added
 - `/stack` skill — installs Longhand, Context-Mode, and Hardgate in sequence

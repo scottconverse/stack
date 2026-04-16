@@ -449,38 +449,58 @@
 <section>
   <div class="container">
     <div class="section-label">Quick Start</div>
-    <h2>Up and running in 4 steps</h2>
-    <p class="lead">Requires Python 3.10+, Node.js 18+, and a bash-compatible shell (Git Bash or WSL on Windows).</p>
+    <h2>Two ways to install</h2>
+    <p class="lead">Requires Python 3.10+, Node.js 18+, and the Claude Code CLI. Pick the path that fits your workflow.</p>
+
+    <!-- Path toggle labels -->
+    <div style="display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green);margin-bottom:6px">Option A — Standalone</div>
+        <div style="font-size:14px;color:var(--text);font-weight:600;margin-bottom:4px">No Claude Code session needed</div>
+        <div style="font-size:13px;color:var(--muted)">Run <code>bash install.sh</code> or double-click <code>install.bat</code> on Windows. Best for first-time setup.</div>
+      </div>
+      <div style="flex:1;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px">Option B — Claude Code Skill</div>
+        <div style="font-size:14px;color:var(--text);font-weight:600;margin-bottom:4px">From inside an active session</div>
+        <div style="font-size:13px;color:var(--muted)">Run <code>/stack</code> in Claude Code. Best for users already in a session.</div>
+      </div>
+    </div>
 
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-body">
           <h3>Clone the repo</h3>
-          <p>The full repo must be present — do not copy just the skill file.</p>
+          <p>Both paths require the full repo — do not copy just the skill file.</p>
           <div class="code-block">
-            <span class="prompt">$ </span><span class="cmd">git clone</span> <span class="arg">https://github.com/scottconverse/stack</span>
+            <span class="prompt">$ </span><span class="cmd">git clone</span> <span class="arg">https://github.com/scottconverse/stack</span><br>
+            <span class="prompt">$ </span><span class="cmd">cd</span> <span class="arg">stack</span>
           </div>
         </div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-body">
-          <h3>Open a Claude Code session</h3>
-          <p>Start Claude Code in your terminal.</p>
+          <h3>Run the installer</h3>
+          <p style="margin-bottom:10px"><strong style="color:var(--green)">Option A — Standalone (recommended for first install):</strong></p>
+          <div class="code-block" style="margin-bottom:10px">
+            <span class="comment"># macOS / Linux</span><br>
+            <span class="prompt">$ </span><span class="cmd">bash install.sh</span><br><br>
+            <span class="comment"># Windows — double-click install.bat, or from Git Bash:</span><br>
+            <span class="prompt">$ </span><span class="cmd">python install.py</span>
+          </div>
+          <p style="margin-bottom:10px"><strong style="color:var(--accent)">Option B — Claude Code skill:</strong></p>
           <div class="code-block">
-            <span class="prompt">$ </span><span class="cmd">claude</span>
+            <span class="prompt">$ </span><span class="cmd">claude</span><br>
+            <span class="prompt">&gt; </span><span class="cmd">/stack</span>
           </div>
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-body">
-          <h3>Run <code>/stack</code></h3>
-          <p>Claude guides you through the install. One interactive step is required for Hardgate — you choose which tools to enforce.</p>
-          <div class="code-block">
-            <span class="prompt">&gt; </span><span class="cmd">/stack</span>
-          </div>
+          <h3>Complete the Hardgate step</h3>
+          <p>Both paths pause here. Open Claude Code, run <code>/hard-gate</code>, and select <strong>context-mode</strong> as the enforcement target. Then return to the installer and press Enter.</p>
         </div>
       </div>
       <div class="step">

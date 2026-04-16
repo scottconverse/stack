@@ -385,7 +385,7 @@
   <div class="sidebar-logo">
     <a href="index.html">
       stack
-      <span class="badge">v1.0.0</span>
+      <span class="badge">v1.1.0</span>
     </a>
   </div>
 
@@ -410,7 +410,8 @@
   <div class="nav-section">
     <div class="nav-section-title">Installation</div>
     <a href="#before-you-start" class="nav-link">Before you start</a>
-    <a href="#install-steps" class="nav-link">Install steps</a>
+    <a href="#install-option-a" class="nav-link">Option A — Standalone</a>
+    <a href="#install-option-b" class="nav-link">Option B — /stack skill</a>
     <a href="#re-running" class="nav-link">Re-running safely</a>
   </div>
 
@@ -575,72 +576,114 @@ SessionEnd               Longhand          Saves full session to searchable memo
   <!-- ── Installation ── -->
   <h2 id="before-you-start">Before you start</h2>
 
-  <p>You'll need the following before running <code>/stack</code>:</p>
+  <p>You'll need the following before installing:</p>
 
   <table>
     <thead><tr><th>Requirement</th><th>How to check</th><th>Where to get it</th></tr></thead>
     <tbody>
-      <tr><td>Claude Code</td><td>Run <code>claude --version</code></td><td>anthropic.com/claude-code</td></tr>
       <tr><td>Python 3.10+</td><td>Run <code>python --version</code></td><td>python.org/downloads</td></tr>
       <tr><td>Node.js 18+</td><td>Run <code>node --version</code></td><td>nodejs.org</td></tr>
-      <tr><td>bash shell</td><td>Git Bash or WSL on Windows; Terminal on Mac</td><td>gitforwindows.org</td></tr>
+      <tr><td>Claude Code</td><td>Run <code>claude --version</code></td><td>anthropic.com/claude-code</td></tr>
       <tr><td>stack repo cloned</td><td><code>ls ~/stack/scripts/verify.py</code></td><td>See step 1 below</td></tr>
+      <tr><td>bash shell <em>(Option B only)</em></td><td>Git Bash or WSL on Windows; Terminal on Mac</td><td>gitforwindows.org</td></tr>
     </tbody>
   </table>
 
-  <div class="callout warn">
-    <span class="callout-icon">⚠</span>
-    <div><strong>Windows users:</strong> Use Git Bash or WSL. PowerShell and cmd.exe are not supported. The skill file uses bash syntax throughout.</div>
+  <div class="callout tip">
+    <span class="callout-icon">✓</span>
+    <div><strong>Windows users:</strong> Option A (standalone installer) runs natively on Windows — no Git Bash or WSL required. Option B (the <code>/stack</code> skill) requires Git Bash or WSL because the skill uses bash syntax.</div>
   </div>
 
-  <h2 id="install-steps">Installation steps</h2>
+  <p>There are two ways to install the stack. Choose the one that fits your situation.</p>
+
+  <h2 id="install-option-a">Option A — Standalone installer <span style="font-size:12px;font-weight:400;color:var(--green);margin-left:8px;">Recommended · no Claude Code session needed</span></h2>
+
+  <p>Run <code>install.py</code> directly from your terminal. Works on macOS, Linux, and Windows. No open Claude Code session required.</p>
 
   <ol class="steps">
     <li>
       <div>
         <h3>Clone the repo</h3>
-        <p>The full repo must be present on your machine. Don't copy just the skill file — the installer requires <code>scripts/verify.py</code> to be alongside it.</p>
-        <pre><code>git clone https://github.com/scottconverse/stack</code></pre>
+        <pre><code>git clone https://github.com/scottconverse/stack
+cd stack</code></pre>
       </div>
     </li>
     <li>
       <div>
-        <h3>Open a Claude Code session</h3>
-        <p>Start Claude Code in your terminal.</p>
-        <pre><code>claude</code></pre>
-      </div>
-    </li>
-    <li>
-      <div>
-        <h3>Run <code>/stack</code></h3>
-        <p>Type <code>/stack</code> at the Claude prompt. Claude will check prerequisites, back up your config, and install each tool in order. Most of the install is automatic.</p>
-        <pre><code>/stack</code></pre>
+        <h3>Run the installer</h3>
+        <p><strong>macOS / Linux:</strong></p>
+        <pre><code>bash install.sh</code></pre>
+        <p><strong>Windows:</strong> Double-click <code>install.bat</code>, or from any terminal:</p>
+        <pre><code>python install.py</code></pre>
         <div class="callout info" style="margin-top:14px">
           <span class="callout-icon">ℹ</span>
-          <div><strong>One interactive step:</strong> Hardgate requires you to make a decision about which tools to enforce. Claude will pause and wait for you to run <code>/hard-gate</code> and reply before continuing.</div>
+          <div><strong>One interactive step:</strong> When the installer reaches Hardgate, it will pause and give you instructions to run <code>/hard-gate</code> inside a Claude Code session. Follow the on-screen prompt, then press Enter to continue.</div>
         </div>
       </div>
     </li>
     <li>
       <div>
         <h3>Restart Claude Code</h3>
-        <p>When verification passes, close and reopen Claude Code. The new tools take effect on the next session.</p>
+        <p>When verification passes, close and reopen Claude Code. The tools take effect on the next session.</p>
       </div>
     </li>
     <li>
       <div>
         <h3>Verify runtime health</h3>
-        <p>After restarting, confirm everything is running — not just configured.</p>
         <pre><code>longhand doctor
 claude mcp list</code></pre>
-        <p><code>longhand doctor</code> should show green status. <code>claude mcp list</code> should include both <code>longhand</code> and <code>context-mode</code>.</p>
+        <p><code>longhand doctor</code> should show green. <code>claude mcp list</code> should include both <code>longhand</code> and <code>context-mode</code>.</p>
+      </div>
+    </li>
+  </ol>
+
+  <h2 id="install-option-b">Option B — <code>/stack</code> Claude Code skill <span style="font-size:12px;font-weight:400;color:var(--accent);margin-left:8px;">Requires an open Claude Code session</span></h2>
+
+  <p>Install from inside an active Claude Code session using the <code>/stack</code> skill command.</p>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <h3>Clone the repo</h3>
+        <p>The full repo must be present on your machine. Don't copy just the skill file — the installer requires <code>scripts/verify.py</code> alongside it.</p>
+        <pre><code>git clone https://github.com/scottconverse/stack</code></pre>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Add the skill to Claude Code</h3>
+        <p>Point Claude Code to the skill file by adding <code>skills/stack.md</code> to your Claude Code skill path.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Open a Claude Code session and run <code>/stack</code></h3>
+        <pre><code>claude
+/stack</code></pre>
+        <div class="callout info" style="margin-top:14px">
+          <span class="callout-icon">ℹ</span>
+          <div><strong>One interactive step:</strong> Hardgate requires you to run <code>/hard-gate</code> and reply before the installer continues.</div>
+        </div>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Restart Claude Code</h3>
+        <p>When verification passes, close and reopen Claude Code.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Verify runtime health</h3>
+        <pre><code>longhand doctor
+claude mcp list</code></pre>
       </div>
     </li>
   </ol>
 
   <h2 id="re-running">Re-running safely</h2>
 
-  <p>You can run <code>/stack</code> again at any time. Before installing anything, it checks which tools are already fully set up and skips them. Only tools that are missing or partially installed get re-run.</p>
+  <p>Both the standalone installer and the <code>/stack</code> skill are safe to run again at any time. Before installing anything, the installer checks which tools are already fully set up and skips them. Only tools that are missing or partially installed get re-run.</p>
 
   <p>Each run creates a fresh timestamped backup of your config — multiple runs produce independent snapshots, not overwrites.</p>
 
@@ -702,6 +745,17 @@ claude mcp list</code></pre>
 
   <!-- ── Troubleshooting ── -->
   <h2 id="when-things-go-wrong">When things go wrong</h2>
+
+  <h3><code>install.py</code> can't find Python</h3>
+  <p>On Windows, make sure Python 3.10+ is installed and on your PATH. Try running:</p>
+  <pre><code>python --version</code></pre>
+  <p>If that fails, download Python from <a href="https://python.org/downloads">python.org/downloads</a> and check "Add Python to PATH" during install. Then re-run <code>install.py</code>.</p>
+
+  <h3><code>install.py</code> fails mid-way through</h3>
+  <p>The installer is safe to re-run. It checks what's already installed and picks up where it left off. Run it again:</p>
+  <pre><code>python install.py</code></pre>
+  <p>If the same step keeps failing, run the verifier to see which check is failing and what the exact retry command is:</p>
+  <pre><code>python install.py --verify</code></pre>
 
   <h3>"verify.py not found"</h3>
   <p>You copied just the skill file instead of cloning the full repo. Fix it:</p>

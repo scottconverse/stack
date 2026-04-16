@@ -4,70 +4,36 @@ Tests for scripts/verify.py
 All path arguments are injectable so tests never touch ~/.claude.
 verify.py must not read from home directory at module import time.
 """
-import json
 import sys
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent))
 import verify
 
-
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-
-def make_settings(tmp_path, session_end=None, user_prompt=None,
-                  pre_tool=None, mcp=None):
-    hooks = {}
-    if session_end is not None:
-        hooks["SessionEnd"] = session_end
-    if user_prompt is not None:
-        hooks["UserPromptSubmit"] = user_prompt
-    if pre_tool is not None:
-        hooks["PreToolUse"] = pre_tool
-    data = {"hooks": hooks}
-    if mcp is not None:
-        data["mcpServers"] = mcp
-    p = tmp_path / "settings.json"
-    p.write_text(json.dumps(data))
-    return p
+from conftest import (
+    make_settings, make_cc_config, make_hooks_dir,
+    wrapped, ctx_hook, hardgate_entry,
+    HARDGATE_CONTENT, ALL_CTX_MATCHERS,
+)
 
 
-def make_cc_config(tmp_path, mcp=None):
-    data = {}
-    if mcp is not None:
-        data["mcpServers"] = mcp
-    p = tmp_path / ".claude.json"
-    p.write_text(json.dumps(data))
-    return p
+# ── _command_str ──────────────────────────────────────────────────────────────
+
+def test_command_str_handles_string_entry():
+    """String-format hook entries must not be silently dropped."""
+    assert "longhand" in verify._command_str("longhand ingest-session")
 
 
-def make_hooks_dir(tmp_path, files=None):
-    d = tmp_path / "hooks"
-    d.mkdir(exist_ok=True)
-    for name, content in (files or {}).items():
-        (d / name).write_text(content)
-    return d
+def test_command_str_handles_flat_dict_entry():
+    assert "longhand" in verify._command_str({"command": "longhand ingest-session"})
 
 
-def wrapped(command):
-    return {"hooks": [{"type": "command", "command": command}]}
-
-
-def ctx_hook(matcher):
-    """A PreToolUse hook entry for the given matcher, routed through context-mode."""
-    return {
-        "matcher": matcher,
-        "hooks": [{"type": "command", "command": "node /path/to/context-mode/start.js"}],
-    }
-
-
-def hardgate_entry(script_path):
-    """A PreToolUse hook entry that wires a hardgate script."""
-    return {
-        "matcher": "Bash",
-        "hooks": [{"type": "command", "command": str(script_path)}],
-    }
+def test_command_str_returns_empty_for_unknown_type():
+    assert verify._command_str(42) == ""
+    assert verify._command_str(None) == ""
 
 
 # ── check_longhand_session_end ────────────────────────────────────────────────
@@ -102,6 +68,12 @@ def test_longhand_session_end_malformed(tmp_path):
     assert verify.check_longhand_session_end(p)["ok"] is False
 
 
+def test_longhand_session_end_string_format_hook(tmp_path):
+    """String-format hook entries (not wrapped dicts) must be recognised."""
+    s = make_settings(tmp_path, session_end=["longhand ingest-session"])
+    assert verify.check_longhand_session_end(s)["ok"] is True
+
+
 # ── check_longhand_prompt_hook ────────────────────────────────────────────────
 
 def test_longhand_prompt_hook_present(tmp_path):
@@ -129,9 +101,7 @@ def test_context_mode_hooks_three_required_matchers(tmp_path):
 
 
 def test_context_mode_hooks_nine_matchers(tmp_path):
-    matchers = ["Bash", "Read", "WebFetch", "Grep", "Agent",
-                "mcp__git", "mcp__npm", "mcp__pytest", "mcp__pip"]
-    s = make_settings(tmp_path, pre_tool=[ctx_hook(m) for m in matchers])
+    s = make_settings(tmp_path, pre_tool=[ctx_hook(m) for m in ALL_CTX_MATCHERS])
     r = verify.check_context_mode_hooks(s)
     assert r["ok"] is True
     assert r["count"] == 9
@@ -222,14 +192,9 @@ def test_context_mode_mcp_missing(tmp_path):
 
 # ── check_hardgate_artifacts ──────────────────────────────────────────────────
 
-HARDGATE_SCRIPT_CONTENT = "#!/bin/bash\n# hardgate enforcement block\nexit 2\n"
-
-
 def test_hardgate_present_and_wired(tmp_path):
     """Script with hardgate content exists AND is wired in settings.json."""
-    hooks_dir = make_hooks_dir(tmp_path, {
-        "enforce-context-mode.sh": HARDGATE_SCRIPT_CONTENT,
-    })
+    hooks_dir = make_hooks_dir(tmp_path, {"enforce-context-mode.sh": HARDGATE_CONTENT})
     script_path = hooks_dir / "enforce-context-mode.sh"
     s = make_settings(tmp_path, pre_tool=[hardgate_entry(script_path)])
     r = verify.check_hardgate_artifacts(s, hooks_dir)
@@ -239,9 +204,7 @@ def test_hardgate_present_and_wired(tmp_path):
 
 def test_hardgate_script_exists_but_not_wired(tmp_path):
     """Script exists with hardgate content but is not wired into settings.json hooks."""
-    hooks_dir = make_hooks_dir(tmp_path, {
-        "enforce-context-mode.sh": HARDGATE_SCRIPT_CONTENT,
-    })
+    hooks_dir = make_hooks_dir(tmp_path, {"enforce-context-mode.sh": HARDGATE_CONTENT})
     s = make_settings(tmp_path, pre_tool=[])  # no wiring
     r = verify.check_hardgate_artifacts(s, hooks_dir)
     assert r["ok"] is False
@@ -272,6 +235,16 @@ def test_hardgate_empty_hooks_dir(tmp_path):
     s = make_settings(tmp_path)
     r = verify.check_hardgate_artifacts(s, hooks_dir)
     assert r["ok"] is False
+
+
+def test_hardgate_fix_message_does_not_prescribe_target(tmp_path):
+    """Fix message must not tell users to 'select context-mode' — Hardgate
+    is tool-agnostic and users choose their own enforcement target."""
+    hooks_dir = make_hooks_dir(tmp_path, {})
+    s = make_settings(tmp_path)
+    r = verify.check_hardgate_artifacts(s, hooks_dir)
+    assert "select context-mode" not in r["fix"].lower()
+    assert "follow the prompts" in r["fix"].lower()
 
 
 # ── run() exit codes ──────────────────────────────────────────────────────────
@@ -308,13 +281,11 @@ def test_run_exits_1_when_settings_missing(tmp_path):
 
 def test_run_exits_0_when_all_required_checks_pass(tmp_path):
     """Hardgate absent (warning) must not prevent exit 0."""
-    matchers = ["Bash", "Read", "WebFetch", "Grep", "Agent",
-                "mcp__git", "mcp__npm", "mcp__pytest", "mcp__pip"]
     s = make_settings(
         tmp_path,
         session_end=[wrapped("longhand ingest-session")],
         user_prompt=[wrapped("longhand __prompt-hook-run")],
-        pre_tool=[ctx_hook(m) for m in matchers],
+        pre_tool=[ctx_hook(m) for m in ALL_CTX_MATCHERS],
         mcp={"context-mode": {"command": "node"}},
     )
     cc = make_cc_config(tmp_path, mcp={"longhand": {"command": "longhand"}})

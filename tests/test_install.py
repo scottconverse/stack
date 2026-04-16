@@ -7,73 +7,25 @@ monkeypatched to tmp_path so tests never touch ~/.claude.
 import json
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent))
 import install
 import verify
 
+from conftest import (
+    make_settings, make_cc_config, make_hooks_dir,
+    wrapped, ctx_hook, hardgate_entry,
+    HARDGATE_CONTENT, ALL_CTX_MATCHERS,
+)
 
-# ── Shared fixtures ────────────────────────────────────────────────────────────
-
-def make_settings(tmp_path, session_end=None, user_prompt=None,
-                  pre_tool=None, mcp=None):
-    hooks = {}
-    if session_end is not None:
-        hooks["SessionEnd"] = session_end
-    if user_prompt is not None:
-        hooks["UserPromptSubmit"] = user_prompt
-    if pre_tool is not None:
-        hooks["PreToolUse"] = pre_tool
-    data = {"hooks": hooks}
-    if mcp is not None:
-        data["mcpServers"] = mcp
-    p = tmp_path / "settings.json"
-    p.write_text(json.dumps(data))
-    return p
-
-
-def make_cc_config(tmp_path, mcp=None):
-    data = {}
-    if mcp is not None:
-        data["mcpServers"] = mcp
-    p = tmp_path / ".claude.json"
-    p.write_text(json.dumps(data))
-    return p
-
-
-def make_hooks_dir(tmp_path, files=None):
-    d = tmp_path / "hooks"
-    d.mkdir(exist_ok=True)
-    for name, content in (files or {}).items():
-        (d / name).write_text(content)
-    return d
-
-
-def wrapped(command):
-    return {"hooks": [{"type": "command", "command": command}]}
-
-
-def ctx_hook(matcher):
-    return {
-        "matcher": matcher,
-        "hooks": [{"type": "command", "command": "node /path/to/context-mode/start.js"}],
-    }
-
-
-def hardgate_entry(script_path):
-    return {
-        "matcher": "Bash",
-        "hooks": [{"type": "command", "command": str(script_path)}],
-    }
-
-
-HARDGATE_CONTENT  = "#!/bin/bash\n# hardgate enforcement block\nexit 2\n"
-ALL_CTX_MATCHERS  = ["Bash", "Read", "WebFetch", "Grep", "Agent",
-                     "mcp__git", "mcp__npm", "mcp__pytest", "mcp__pip"]
+# Content that passes _is_context_mode_install_js() validation
+CTX_JS_CONTENT = "// context-mode MCP server installer\nmodule.exports = {};\n"
+CTX_JS_CONTENT_UNDERSCORE = "// context_mode MCP server installer\nmodule.exports = {};\n"
 
 
 # ── _run() ─────────────────────────────────────────────────────────────────────
@@ -202,12 +154,38 @@ def test_hardgate_incomplete_when_empty_hooks_dir(tmp_path, monkeypatch):
     assert install.is_hardgate_complete(verify) is False
 
 
+# ── _is_context_mode_install_js() ─────────────────────────────────────────────
+
+def test_is_context_mode_install_js_matches_hyphenated(tmp_path):
+    f = tmp_path / "install.js"
+    f.write_text(CTX_JS_CONTENT)
+    assert install._is_context_mode_install_js(f) is True
+
+
+def test_is_context_mode_install_js_matches_underscored(tmp_path):
+    f = tmp_path / "install.js"
+    f.write_text(CTX_JS_CONTENT_UNDERSCORE)
+    assert install._is_context_mode_install_js(f) is True
+
+
+def test_is_context_mode_install_js_rejects_unrelated_content(tmp_path):
+    """install.js from an unrelated project must not match."""
+    f = tmp_path / "install.js"
+    f.write_text("// some completely unrelated tool\nmodule.exports = {};\n")
+    assert install._is_context_mode_install_js(f) is False
+
+
+def test_is_context_mode_install_js_handles_missing_file(tmp_path):
+    f = tmp_path / "nonexistent.js"
+    assert install._is_context_mode_install_js(f) is False
+
+
 # ── _find_context_mode_dir() ───────────────────────────────────────────────────
 
 def test_find_context_mode_dir_finds_plugin_cache(tmp_path, monkeypatch):
     cache = tmp_path / ".claude" / "plugins" / "cache" / "context-mode"
     cache.mkdir(parents=True)
-    (cache / "install.js").write_text("// install")
+    (cache / "install.js").write_text(CTX_JS_CONTENT)
     monkeypatch.setattr(install, "HOME", tmp_path)
     assert install._find_context_mode_dir() == cache
 
@@ -216,7 +194,7 @@ def test_find_context_mode_dir_finds_at_depth2(tmp_path, monkeypatch):
     # ~/projects/context-mode/install.js
     d = tmp_path / "projects" / "context-mode"
     d.mkdir(parents=True)
-    (d / "install.js").write_text("// install")
+    (d / "install.js").write_text(CTX_JS_CONTENT)
     monkeypatch.setattr(install, "HOME", tmp_path)
     assert install._find_context_mode_dir() == d
 
@@ -225,7 +203,7 @@ def test_find_context_mode_dir_finds_at_depth3(tmp_path, monkeypatch):
     # ~/dev/tools/context-mode/install.js
     d = tmp_path / "dev" / "tools" / "context-mode"
     d.mkdir(parents=True)
-    (d / "install.js").write_text("// install")
+    (d / "install.js").write_text(CTX_JS_CONTENT)
     monkeypatch.setattr(install, "HOME", tmp_path)
     assert install._find_context_mode_dir() == d
 
@@ -248,7 +226,16 @@ def test_find_context_mode_dir_ignores_unrelated_dirs_with_install_js(tmp_path, 
     # install.js exists but dir is not named context-mode
     d = tmp_path / "projects" / "some-other-tool"
     d.mkdir(parents=True)
-    (d / "install.js").write_text("// install")
+    (d / "install.js").write_text(CTX_JS_CONTENT)
+    monkeypatch.setattr(install, "HOME", tmp_path)
+    assert install._find_context_mode_dir() is None
+
+
+def test_find_context_mode_dir_ignores_install_js_without_matching_content(tmp_path, monkeypatch):
+    """Dir is named context-mode but install.js belongs to an unrelated project."""
+    d = tmp_path / "projects" / "context-mode"
+    d.mkdir(parents=True)
+    (d / "install.js").write_text("// unrelated project installer")
     monkeypatch.setattr(install, "HOME", tmp_path)
     assert install._find_context_mode_dir() is None
 
@@ -257,11 +244,11 @@ def test_find_context_mode_dir_prefers_plugin_cache_over_home_walk(tmp_path, mon
     # Both cache and home-walk match — cache should win (checked first)
     cache = tmp_path / ".claude" / "plugins" / "cache" / "context-mode"
     cache.mkdir(parents=True)
-    (cache / "install.js").write_text("// cache version")
+    (cache / "install.js").write_text(CTX_JS_CONTENT)
 
     other = tmp_path / "projects" / "context-mode"
     other.mkdir(parents=True)
-    (other / "install.js").write_text("// home walk version")
+    (other / "install.js").write_text(CTX_JS_CONTENT)
 
     monkeypatch.setattr(install, "HOME", tmp_path)
     assert install._find_context_mode_dir() == cache
@@ -271,7 +258,7 @@ def test_find_context_mode_dir_accepts_underscore_naming(tmp_path, monkeypatch):
     # context_mode (underscore) is an alternative naming convention
     d = tmp_path / "projects" / "context_mode"
     d.mkdir(parents=True)
-    (d / "install.js").write_text("// install")
+    (d / "install.js").write_text(CTX_JS_CONTENT_UNDERSCORE)
     monkeypatch.setattr(install, "HOME", tmp_path)
     assert install._find_context_mode_dir() == d
 
@@ -280,7 +267,7 @@ def test_find_context_mode_dir_does_not_find_depth4(tmp_path, monkeypatch):
     # depth 4 is beyond the search limit — must return None
     deep = tmp_path / "a" / "b" / "c" / "context-mode"
     deep.mkdir(parents=True)
-    (deep / "install.js").write_text("// install")
+    (deep / "install.js").write_text(CTX_JS_CONTENT)
     monkeypatch.setattr(install, "HOME", tmp_path)
     assert install._find_context_mode_dir() is None
 
@@ -346,3 +333,68 @@ def test_hardgate_complete_returns_false_when_hooks_dir_is_a_file(tmp_path, monk
     monkeypatch.setattr(install, "HOOKS_DIR", file_not_dir)
     # Must return False cleanly — no exception
     assert install.is_hardgate_complete(verify) is False
+
+
+# ── backup_configs() ──────────────────────────────────────────────────────────
+
+def test_backup_configs_creates_timestamped_backup(tmp_path, monkeypatch):
+    settings = tmp_path / ".claude" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text('{"hooks": {}}')
+    monkeypatch.setattr(install, "SETTINGS", settings)
+    monkeypatch.setattr(install, "CC_CONFIG", tmp_path / ".claude.json")
+    ts = install.backup_configs()
+    backup = settings.parent / f"settings.json.stack-backup-{ts}"
+    assert backup.exists()
+    assert backup.read_text() == '{"hooks": {}}'
+
+
+def test_backup_configs_returns_timestamp_string(tmp_path, monkeypatch):
+    monkeypatch.setattr(install, "SETTINGS", tmp_path / "s.json")
+    monkeypatch.setattr(install, "CC_CONFIG", tmp_path / "c.json")
+    ts = install.backup_configs()
+    assert len(ts) == 15  # YYYYMMDD-HHMMSS
+    assert ts[8] == "-"
+
+
+def test_backup_configs_handles_missing_file(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(install, "SETTINGS", tmp_path / "nonexistent.json")
+    monkeypatch.setattr(install, "CC_CONFIG", tmp_path / "nonexistent.json")
+    ts = install.backup_configs()
+    assert isinstance(ts, str) and len(ts) > 0
+    out = capsys.readouterr().out
+    assert "not found" in out.lower() or "will be created" in out.lower()
+
+
+# ── restore_configs() ─────────────────────────────────────────────────────────
+
+def test_restore_configs_restores_from_backup(tmp_path, monkeypatch):
+    settings = tmp_path / ".claude" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    backup = settings.parent / "settings.json.stack-backup-20260101-120000"
+    backup.write_text('{"original": true}')
+    settings.write_text('{"original": false}')
+    monkeypatch.setattr(install, "HOME", tmp_path)
+    install.restore_configs("20260101-120000")
+    assert json.loads(settings.read_text())["original"] is True
+
+
+def test_restore_configs_warns_when_no_backup(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(install, "HOME", tmp_path)
+    install.restore_configs("99991231-235959")
+    out = capsys.readouterr().out
+    assert "no backup" in out.lower() or "not present" in out.lower() or "not found" in out.lower()
+
+
+# ── --verify flag ─────────────────────────────────────────────────────────────
+
+def test_verify_flag_delegates_to_verifier_and_exits(monkeypatch):
+    """python install.py --verify must call v.run() and sys.exit with its result."""
+    monkeypatch.setattr(sys, "argv", ["install.py", "--verify"])
+    mock_mod = MagicMock()
+    mock_mod.run.return_value = 0
+    with patch.object(install, "_load_verify", return_value=mock_mod):
+        with pytest.raises(SystemExit) as exc_info:
+            install.main()
+    assert exc_info.value.code == 0
+    mock_mod.run.assert_called_once()

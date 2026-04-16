@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-stack installer — standalone version (v1.1.0)
+stack installer — standalone version
 
 Installs Longhand, Context-Mode, and Hardgate (guided) without
 requiring an open Claude Code session.
@@ -10,6 +10,8 @@ Usage:
   python install.py --verify # run post-install verification only
 """
 from __future__ import annotations
+
+__version__ = "1.1.2"
 
 import importlib.util
 import os
@@ -88,7 +90,7 @@ def _load_verify():
 
 
 # ── Run a command quietly; dump captured output only on failure ────────────────
-def _run(cmd: list[str], cwd: str | None = None) -> int:
+def _run(cmd: list[str], cwd: str | pathlib.Path | None = None) -> int:
     try:
         result = subprocess.run(
             cmd, cwd=cwd,
@@ -231,23 +233,53 @@ def is_context_mode_complete(v) -> bool:
 def is_hardgate_complete(v) -> bool:
     try:
         return v.check_hardgate_artifacts(SETTINGS, HOOKS_DIR)["ok"]
-    except (NotADirectoryError, OSError):
+    except Exception:
+        # Catch broadly: malformed hook data, NotADirectoryError if HOOKS_DIR
+        # is a file, OSError on permission errors, TypeError on unexpected
+        # structure — all mean "not fully installed."
+        return False
+
+
+# Directories at home-directory depth-1 that will never contain Context-Mode.
+# Skipping these makes the bounded walk significantly faster on developer machines.
+_SKIP_DIRS = frozenset({
+    ".cargo", ".npm", ".gradle", ".cache", ".local", ".config",
+    ".git", ".svn", ".hg", ".idea", ".vscode", ".eclipse",
+    "node_modules", "Library", "AppData", "System", "Windows",
+    ".android", ".dotnet", ".nuget", ".m2",
+    "__pycache__", ".pyenv", ".rbenv", ".nvm", ".rustup",
+    ".ssh", ".gnupg", ".kube", ".terraform", ".aws",
+})
+
+
+def _is_context_mode_install_js(path: pathlib.Path) -> bool:
+    """Return True only if install.js looks like the real Context-Mode installer.
+
+    Checking content prevents false positives from unrelated projects
+    that happen to be named context-mode or contain an install.js.
+    """
+    try:
+        text = path.read_text(errors="ignore")
+        return "context-mode" in text or "context_mode" in text
+    except OSError:
         return False
 
 
 # ── Context-Mode discovery ─────────────────────────────────────────────────────
 def _find_context_mode_dir() -> pathlib.Path | None:
-    # 1. Plugin cache
+    # 1. Plugin cache — highest confidence, check first
     cache = HOME / ".claude" / "plugins" / "cache"
     if cache.exists():
         for p in cache.rglob("install.js"):
-            if "context-mode" in str(p) or "context_mode" in str(p):
+            if ("context-mode" in str(p) or "context_mode" in str(p)) \
+                    and _is_context_mode_install_js(p):
                 return p.parent
 
-    # 2. Bounded Python-native walk (cross-platform — no 'find' dependency)
+    # 2. Bounded Python-native walk (cross-platform — no 'find' dependency).
+    # Skips common system/tool directories that will never contain Context-Mode.
     for depth1 in HOME.iterdir():
         try:
-            if not depth1.is_dir():
+            if not depth1.is_dir() or depth1.name in _SKIP_DIRS:
                 continue
             for depth2 in depth1.iterdir():
                 try:
@@ -257,7 +289,7 @@ def _find_context_mode_dir() -> pathlib.Path | None:
                     if candidate.exists() and (
                         "context-mode" in depth2.name
                         or "context_mode" in depth2.name
-                    ):
+                    ) and _is_context_mode_install_js(candidate):
                         return depth2
                     # depth 3
                     for depth3 in depth2.iterdir():
@@ -268,7 +300,7 @@ def _find_context_mode_dir() -> pathlib.Path | None:
                             if candidate.exists() and (
                                 "context-mode" in depth3.name
                                 or "context_mode" in depth3.name
-                            ):
+                            ) and _is_context_mode_install_js(candidate):
                                 return depth3
                         except PermissionError:
                             continue
@@ -362,7 +394,7 @@ def main() -> None:
         sys.exit(v.run())
 
     # Banner
-    print(f"\n{bold('Stack Installer')}  {dim('v1.1.1')}")
+    print(f"\n{bold('Stack Installer')}  {dim(f'v{__version__}')}")
     print(dim("github.com/scottconverse/stack"))
     print(dim("Installs Longhand · Context-Mode · Hardgate\n"))
 

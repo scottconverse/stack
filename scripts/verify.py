@@ -44,7 +44,10 @@ def _load(path: Path) -> dict | None:
 
 
 def _command_str(entry: Any) -> str:
-    """Extract all command text from a hook entry (wrapped or flat format)."""
+    """Extract all command text from a hook entry (wrapped, flat, or string format)."""
+    if isinstance(entry, str):
+        # Some Claude Code hook formats store the command directly as a string.
+        return entry
     if not isinstance(entry, dict):
         return ""
     inner = entry.get("hooks")
@@ -195,7 +198,7 @@ def check_hardgate_artifacts(settings_path: Path, hooks_dir: Path) -> dict:
             "ok": False,
             "warn": True,
             "label": "Hardgate enforcement",
-            "fix": "Run /hard-gate and select context-mode as the enforcement target",
+            "fix": "Run /hard-gate and follow the prompts to choose which tools to enforce",
         }
 
     # Step 2: verify at least one is wired in settings.json
@@ -218,7 +221,7 @@ def check_hardgate_artifacts(settings_path: Path, hooks_dir: Path) -> dict:
         "ok": wired,
         "warn": True,
         "label": "Hardgate enforcement",
-        "fix": "Run /hard-gate and select context-mode as the enforcement target",
+        "fix": "Run /hard-gate and follow the prompts to choose which tools to enforce",
     }
 
 
@@ -252,7 +255,8 @@ def print_report(results: list[dict]) -> int:
         print()
         return 1
 
-    if any(not r["ok"] for r in results):
+    # Only warn-flagged items (Hardgate) can remain non-ok here — required checks passed.
+    if any(not r["ok"] and r.get("warn") for r in results):
         print("Required checks passed. Complete Hardgate to activate enforcement.\n")
     else:
         print("Installation complete. Restart Claude Code to activate all changes.\n")

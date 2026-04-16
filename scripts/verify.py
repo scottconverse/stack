@@ -59,7 +59,14 @@ def _command_str(entry: Any) -> str:
 
 
 def _hook_list_contains(entries: list, needle: str) -> bool:
-    return any(needle in _command_str(e) for e in entries)
+    # On Windows, executables may appear as full paths with a .EXE/.exe/.cmd
+    # suffix (e.g. "C:\...\longhand.EXE ingest-session").  Normalise by
+    # collapsing "<name>.EXE " → "<name> " so the plain-name needle still
+    # matches, regardless of case or extension.
+    import re
+    def _normalise(cmd: str) -> str:
+        return re.sub(r'(?i)\.(?:exe|cmd|bat)\b', '', cmd)
+    return any(needle in _normalise(_command_str(e)) for e in entries)
 
 
 # ── Individual checks ─────────────────────────────────────────────────────────
@@ -99,22 +106,37 @@ def check_longhand_prompt_hook(settings_path: Path) -> dict:
 
 
 def check_context_mode_hooks(settings_path: Path) -> dict:
-    """Require >=3 context-mode PreToolUse matchers, all required ones present,
-    no duplicates.
+    """Check that context-mode is wired up via either:
 
-    Counting is not sufficient. The required matchers (Bash, Read, WebFetch)
-    must all be present. Duplicate matchers from a double-install must fail
-    rather than inflate the count.
+    (a) Plugin-based install: 'context-mode@scottconverse-context-mode' present
+        in settings.json's enabledPlugins — hooks are managed by the plugin
+        system, not explicit entries in the hooks section.
+
+    (b) Legacy direct install: >=3 PreToolUse matchers including all required
+        ones (Bash, Read, WebFetch), with no duplicates.
     """
     data = _load(settings_path)
     if data is None:
         return {
             "ok": False,
-            "label": "Context-Mode PreToolUse hooks",
+            "label": "Context-Mode hooks / plugin",
             "count": 0,
             "detail": "settings.json missing",
             "fix": "Run: node install.js  (from your context-mode directory)",
         }
+
+    # (a) Plugin-based install — preferred path
+    enabled_plugins = data.get("enabledPlugins", {})
+    if any("context-mode" in k for k in enabled_plugins):
+        return {
+            "ok": True,
+            "label": "Context-Mode hooks / plugin",
+            "count": 0,
+            "detail": "installed via plugin system",
+            "fix": None,
+        }
+
+    # (b) Legacy: explicit PreToolUse hooks
     entries = data.get("hooks", {}).get("PreToolUse", [])
     ctx_entries = [e for e in entries if "context-mode" in _command_str(e)]
     count = len(ctx_entries)
@@ -138,7 +160,7 @@ def check_context_mode_hooks(settings_path: Path) -> dict:
     ok = count >= 3 and not missing_required and not has_duplicates
     return {
         "ok": ok,
-        "label": "Context-Mode PreToolUse hooks",
+        "label": "Context-Mode hooks / plugin",
         "count": count,
         "detail": "; ".join(problems) if problems else None,
         "fix": "Run: node install.js  (from your context-mode directory)",
@@ -162,6 +184,15 @@ def check_longhand_mcp(settings_path: Path, cc_config_path: Path) -> dict:
 def check_context_mode_mcp(settings_path: Path, cc_config_path: Path) -> dict:
     cc = _load(cc_config_path) or {}
     settings = _load(settings_path) or {}
+
+    # Plugin-based install: enabled via enabledPlugins — MCP registered in
+    # ~/.mcp.json by the plugin system.
+    enabled_plugins = settings.get("enabledPlugins", {})
+    if any("context-mode" in k for k in enabled_plugins):
+        mcp_json = _load(settings_path.parent.parent / ".mcp.json") or {}
+        if any("context-mode" in k for k in mcp_json.get("mcpServers", {})):
+            return {"ok": True, "label": "Context-Mode MCP server", "fix": None}
+
     ok = (
         "context-mode" in cc.get("mcpServers", {})
         or "context-mode" in settings.get("mcpServers", {})

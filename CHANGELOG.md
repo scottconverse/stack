@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
+## [1.1.3] — 2026-04-16
+
+### Fixed
+- `install.py` `_run()`: resolves executables via `shutil.which()` before
+  `subprocess.run()` so `.cmd`/`.exe` wrappers (`claude.cmd`, `longhand.exe`)
+  are found on Windows without `shell=True`
+- `install.py` `_run()`: now returns `(exit_code, stdout)` tuple so callers
+  can inspect output for idempotency signals
+- `install.py` `install_longhand()`: uses `longhand setup --skip-ingest` on
+  Windows — `longhand ingest` crashes with exit `0xC0000005` (ChromaDB HNSW
+  native access violation) on Windows Python 3.13
+- `install.py` `install_longhand()`: treats `0xC0000005` exit from any
+  longhand step as a non-fatal warning so Context-Mode and Hardgate still
+  install when ChromaDB's native layer fails
+- `install.py` `install_longhand()`: treats `claude mcp add` exit 1 with
+  "already exists" output as success — makes re-runs fully idempotent
+- `install.py` `install_hardgate()`: catches `EOFError` alongside
+  `KeyboardInterrupt` so Hardgate step skips gracefully when stdin is not a
+  tty (piped runs, CI, non-interactive terminals)
+- `verify.py` `_hook_list_contains()`: normalises `.EXE`/`.exe`/`.cmd`
+  suffixes before matching — `longhand.EXE ingest-session` now matches the
+  `longhand ingest-session` needle on Windows
+- `verify.py` `check_context_mode_hooks()`: accepts plugin-based install
+  (`enabledPlugins` key) as a valid alternative to explicit PreToolUse hooks —
+  the plugin system manages hooks internally and does not write them to the
+  hooks section
+- `verify.py` `check_context_mode_mcp()`: checks `~/.mcp.json` for
+  plugin-based installs — the plugin system registers MCP servers there, not
+  in `~/.claude.json`
+
 ## [1.1.2] — 2026-04-16
 
 ### Fixed

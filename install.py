@@ -11,7 +11,7 @@ Usage:
 """
 from __future__ import annotations
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 import importlib.util
 import os
@@ -90,7 +90,13 @@ def _load_verify():
 
 
 # ── Run a command quietly; dump captured output only on failure ────────────────
-def _run(cmd: list[str], cwd: str | pathlib.Path | None = None) -> int:
+def _run(cmd: list[str], cwd: str | pathlib.Path | None = None) -> tuple[int, str]:
+    # On Windows, resolve the executable via shutil.which so that .cmd/.exe
+    # wrappers (e.g. claude.cmd, longhand.exe) are found even when the bare
+    # name wouldn't be located by CreateProcess.
+    resolved = shutil.which(cmd[0])
+    if resolved:
+        cmd = [resolved] + list(cmd[1:])
     try:
         result = subprocess.run(
             cmd, cwd=cwd,
@@ -100,14 +106,14 @@ def _run(cmd: list[str], cwd: str | pathlib.Path | None = None) -> int:
     except FileNotFoundError:
         print()
         _fail(f"command not found: {cmd[0]}")
-        return 127  # standard shell exit code for "command not found"
+        return 127, ""  # standard shell exit code for "command not found"
     if result.returncode != 0 and result.stdout.strip():
         print()
         print(dim("  " + "─" * 46))
         for line in result.stdout.rstrip().splitlines():
             print(f"  {line}")
         print(dim("  " + "─" * 46))
-    return result.returncode
+    return result.returncode, result.stdout
 
 
 # ── Prerequisite checks ────────────────────────────────────────────────────────
@@ -180,7 +186,7 @@ def check_prereqs() -> list[str]:
                 )
             else:
                 _step("npm install -g @anthropic-ai/claude-code")
-                code = _run([npm, "install", "-g", "@anthropic-ai/claude-code"])
+                code, _ = _run([npm, "install", "-g", "@anthropic-ai/claude-code"])
                 if code != 0:
                     failures.append(
                         "Claude Code install failed — see output above\n"
@@ -319,7 +325,7 @@ def install_longhand() -> bool:
     steps = [
         ([sys.executable, "-m", "pip", "install", "longhand"],
          "pip install longhand"),
-        (["longhand", "setup"],
+        (["longhand", "setup", "--skip-ingest"] if sys.platform == "win32" else ["longhand", "setup"],
          "longhand setup"),
         (["longhand", "prompt-hook", "install"],
          "longhand prompt-hook install"),
@@ -330,8 +336,19 @@ def install_longhand() -> bool:
 
     for cmd, label in steps:
         _step(label)
-        code = _run(cmd)
+        code, out = _run(cmd)
         if code != 0:
+            # On Windows, 0xC0000005 (3221225477) is a native access violation
+            # in ChromaDB's hnsw/onnx layer. Hooks and MCP wiring complete
+            # successfully before the crash — treat as a non-fatal warning.
+            if sys.platform == "win32" and code == 3221225477:
+                _warn(f"{label} — ChromaDB native crash on Windows (hooks/MCP still wired)")
+                _warn("Run `longhand doctor` after a full stack restart to re-verify.")
+                continue
+            # `claude mcp add` exits 1 when the server is already registered.
+            if "already exists" in out and "mcp add" in label:
+                _ok(f"{label} — already registered, skipping")
+                continue
             _fail(f"{label} failed (exit {code})")
             print(red("\n  Aborting. Fix the error above and re-run install.py"))
             return False
@@ -343,7 +360,7 @@ def install_context_mode(ctx_dir: pathlib.Path) -> bool:
     _header("Context-Mode  (context layer)")
     print(f"  {dim('using')} {ctx_dir}")
     _step("node install.js")
-    code = _run(["node", "install.js"], cwd=ctx_dir)
+    code, _ = _run(["node", "install.js"], cwd=ctx_dir)
     if code != 0:
         _fail("node install.js failed — see output above")
         return False
@@ -368,7 +385,7 @@ def install_hardgate() -> None:
     try:
         input("  Press Enter when Hardgate is done  (Ctrl+C to skip)... ")
         _ok("Continuing to verification")
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError):
         print()
         _warn("Hardgate skipped — run /hard-gate in Claude Code when ready")
 
@@ -423,7 +440,7 @@ def main() -> None:
         if reply in ("", "y", "yes"):
             clone_target = HOME / ".claude" / "plugins" / "context-mode"
             _step(f"git clone → {clone_target}")
-            code = _run([
+            code, _ = _run([
                 "git", "clone",
                 "https://github.com/scottconverse/context-mode",
                 str(clone_target),

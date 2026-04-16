@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] — 2026-04-16
+
+### Added
+- `install.py` — standalone installer; installs Longhand and Context-Mode
+  without requiring an open Claude Code session. Guides Hardgate interactively.
+  Shares `scripts/verify.py` with the skill for identical post-install checks.
+- `install.bat` — Windows double-click launcher for `install.py`
+- `install.sh` — macOS / Linux launcher for `install.py`
+- `install.py --verify` flag to run post-install verification only
+- Cross-platform context-mode discovery (Python-native walk, no `find` dependency)
+- ANSI colour output with automatic fallback for legacy Windows terminals
+
 ## [1.0.0] — 2026-04-16
 
 ### Added

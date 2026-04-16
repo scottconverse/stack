@@ -1,4 +1,4 @@
-# stack · v1.0.0
+# stack · v1.1.0
 
 **One skill to install them all.**
 
@@ -10,20 +10,31 @@ guards, and a hardened post-install verification checklist.
 
 ## Requirements
 
-- Claude Code (CLI or Cowork)
 - Python 3.10+
 - Node.js 18+
-- **bash-compatible shell** — Git Bash or WSL on Windows. Not PowerShell.
+- Claude Code CLI (`claude` on PATH)
 - The full `stack` repo cloned locally
 
 ## Install
 
 ```bash
 git clone https://github.com/scottconverse/stack
+cd stack
 ```
 
-Add `skills/stack.md` to your Claude Code skill path, or install the
-repo as a Cowork plugin. Open a Claude Code session and run `/stack`.
+**Option A — Standalone installer (no Claude Code session needed):**
+
+```bash
+# macOS / Linux
+bash install.sh
+
+# Windows — double-click install.bat, or from Git Bash:
+python install.py
+```
+
+**Option B — Claude Code skill (from inside an active session):**
+
+Add `skills/stack.md` to your Claude Code skill path, open a session, and run `/stack`.
 
 > **Do not copy just `skills/stack.md` to `~/.claude/skills/`.**
 > The skill requires `scripts/verify.py` to be present. Clone the

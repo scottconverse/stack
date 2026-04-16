@@ -17,7 +17,7 @@ Hey — Scott here. Thanks for checking this out.
 
 So I built a single skill that does all of it in the right order, with timestamped config backups, per-tool idempotency checks, and a post-install verifier that tells you exactly what passed and what to retry.
 
-**Current state (v0.1.0):** Install-only, three tools, 29 tests, verified on Python 3.14.3 and Node 18+. The verifier checks config wiring but not live MCP server health — `longhand doctor` and `claude mcp list` are still the runtime truth.
+**Current state (v1.1.1):** Install-only, three tools, 59 tests, verified on Python 3.14.3 and Node 18+. Two install paths: `python install.py` (standalone, no active Claude Code session needed) and `/stack` (Claude Code skill). The verifier checks config wiring but not live MCP server health — `longhand doctor` and `claude mcp list` are still the runtime truth.
 
 **What's coming:** Uninstall support, richer verifier output, and possibly support for additional tools in the stack. Nothing is on a hard timeline — this is a tool I use myself, and I ship when it's ready.
 
@@ -49,17 +49,17 @@ The reason the verifier can't be bundled into the skill file itself: Claude Code
 
 ## ❓ Q&A — Seed post 2
 
-**Title:** Can I run /stack again if something fails mid-install?
+**Title:** Can I run the installer again if something fails mid-install?
 
 ---
 
-**Yes — `/stack` is designed to be re-run safely.**
+**Yes — both install paths are designed to be re-run safely.**
 
-Before starting any installs, the skill checks which tools are already fully installed. "Fully" means every required artifact is present: the CLI tool, the hooks in `settings.json`, and the MCP server entry. If all artifacts for a tool are present, that tool is skipped. If any artifact is missing, the full installer for that tool runs again.
+Before starting any installs, the installer checks which tools are already fully installed. "Fully" means every required artifact is present: the CLI tool, the hooks in `settings.json`, and the MCP server entry. If all artifacts for a tool are present, that tool is skipped. If any artifact is missing, the full installer for that tool runs again.
 
 This means:
-- If Longhand installed cleanly but Context-Mode failed, re-running `/stack` skips Longhand and retries Context-Mode.
-- If you run `/stack` on a machine where everything is already installed, it prints "fully installed — skipping" for each tool and goes straight to verification.
+- If Longhand installed cleanly but Context-Mode failed, re-running skips Longhand and retries Context-Mode.
+- If you run the installer on a machine where everything is already installed, it prints "fully installed — skipping" for each tool and goes straight to verification.
 
 Each run also creates a new timestamped backup of your config files, so you can always roll back to any prior state:
 
@@ -149,7 +149,7 @@ Welcome to the `stack` community.
 
 **Getting started:**
 - [README](https://github.com/scottconverse/stack/blob/master/README.md) — what this is and how to install it
-- [User Manual](https://scottconverse.github.io/stack/USER-MANUAL.md) — plain-language guide including troubleshooting
+- [User Manual](https://scottconverse.github.io/stack/USER-MANUAL.html) — plain-language guide including troubleshooting
 - [CONTRIBUTING.md](https://github.com/scottconverse/stack/blob/master/CONTRIBUTING.md) — how to run tests and submit changes
 
 **Getting help:**
@@ -162,4 +162,4 @@ Welcome to the `stack` community.
 - Want to add a check to the verifier? Read the architecture notes in CONTRIBUTING.md — the pattern is TDD: write the failing test first, then the implementation
 - Have a tool you think belongs in the stack? Drop it in Ideas
 
-The test suite (`pytest tests/ -v`) runs in under a second from a clean clone. If you're contributing, run it before every commit — all 29 must pass.
+The test suite (`pytest tests/ -v`) runs in under a second from a clean clone. If you're contributing, run it before every commit — all 59 must pass.

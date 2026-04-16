@@ -6,7 +6,7 @@
 
 ## What is this?
 
-`stack` installs three tools that work together to make Claude Code more reliable, more self-aware, and more controlled. You run one command — `/stack` — and it sets up all three in the right order with the right wiring.
+`stack` installs three tools that work together to make Claude Code more reliable, more self-aware, and more controlled. A standalone installer (`install.py`) and a Claude Code skill (`/stack`) both set up all three tools in the right order with the right wiring — choose the path that fits your situation.
 
 Once installed, these tools run automatically in the background every time you use Claude Code. You do not need to think about them during normal use. They change *how* Claude behaves, not what you ask it to do.
 
@@ -137,39 +137,52 @@ Here is what happens from the moment you send a message to Claude through to the
 ### Before you start
 
 You need:
-- **Claude Code** installed (the command-line tool from Anthropic)
 - **Python 3.10 or newer** — check by running `python --version` in your terminal
 - **Node.js 18 or newer** — check by running `node --version` in your terminal
+- **Claude Code** installed (the command-line tool from Anthropic)
 - **The stack repo cloned to your computer** — see below
-- **A bash-compatible terminal** — Git Bash or WSL on Windows; Terminal on Mac/Linux. Do not use PowerShell or cmd.exe.
+
+**On Windows:** Any terminal works for Option A (the standalone installer) — Command Prompt, PowerShell, or Git Bash. Option B (the Claude Code skill) requires a bash-compatible terminal: Git Bash or WSL.
 
 ### Step 1: Clone the repo
 
 ```bash
 git clone https://github.com/scottconverse/stack
+cd stack
 ```
 
-This downloads the installer to your computer. Do not copy just the skill file — the installer needs files from the full repo.
+This downloads everything the installer needs. Do not copy just the skill file — the installer requires the full repo.
 
-### Step 2: Open a Claude Code session
+### Step 2: Choose your install path
 
-Start Claude Code in your terminal:
+**Option A — Standalone installer (no Claude Code session needed):**
+
+```bash
+# macOS / Linux
+bash install.sh
+
+# Windows — double-click install.bat, or from any terminal:
+python install.py
+```
+
+The installer runs in your terminal, checks prerequisites, installs everything automatically, and pauses once to ask which tools Hardgate should enforce. When it finishes, it prints a verification summary. If everything is green, proceed to Step 3.
+
+**Option B — Claude Code skill (from inside an active session):**
+
+Start Claude Code, then type `/stack` and press Enter.
 
 ```bash
 claude
+# then type: /stack
 ```
 
-### Step 3: Run `/stack`
+Claude guides you through the same steps interactively. There is one pause — Hardgate — where you choose which tools to enforce.
 
-Type `/stack` in the Claude Code prompt and press Enter.
+### Step 3: Restart Claude Code
 
-Claude will guide you through the installation. Most of it is automatic. There is one step — Hardgate — that requires you to make a decision about which tools to enforce.
+When the installer reports verification passed, close and reopen Claude Code. The new tools take effect on the next session.
 
-### Step 4: Restart Claude Code
-
-When the installer tells you verification passed, close and reopen Claude Code. The new tools take effect on the next session.
-
-### Step 5: Verify runtime health
+### Step 4: Verify runtime health
 
 After restarting, confirm everything is running:
 
@@ -184,9 +197,12 @@ claude mcp list
 
 ## Running the installer again (idempotency)
 
-You can run `/stack` again at any time. It checks which tools are already fully installed and skips them. It only installs what is missing or incomplete.
+Both install paths are safe to run repeatedly.
 
-This is safe to run repeatedly. It will not create duplicate entries or overwrite a working install.
+- **Standalone:** `python install.py` — checks which tools are already fully installed and skips them.
+- **Skill:** `/stack` — does the same check before each step.
+
+Neither path creates duplicate entries or overwrites a working install. If a tool is partially installed, re-running will complete it.
 
 ---
 
@@ -201,13 +217,31 @@ After installation, `scripts/verify.py` runs automatically and checks:
 | Context-Mode PreToolUse hooks | Context-Mode is not intercepting tool calls. Run `node install.js` from your context-mode directory. |
 | Longhand MCP server | Claude cannot query Longhand's memory. Run `claude mcp add longhand -s user -- longhand mcp-server`. |
 | Context-Mode MCP server | Claude cannot use the Context-Mode sandbox. Run `node install.js` from your context-mode directory. |
-| Hardgate enforcement | Hardgate is installed but no enforcement target is set. Run `/hard-gate` and select a target. |
+| Hardgate enforcement | Hardgate is installed but no enforcement target is set. Run `/hard-gate` and follow the prompts to choose which tools to enforce. |
 
 The verifier will print the exact retry command for each failure. Follow those commands in order.
 
 ---
 
 ## What to do when things go wrong
+
+### `install.py` says Python is not found or is below 3.10
+
+The installer checks your Python version before starting. If it reports Python is missing or too old:
+
+- **Windows:** Download from [python.org/downloads](https://python.org/downloads). During install, check "Add Python to PATH."
+- **macOS:** Run `brew install python` (requires Homebrew), or download from python.org.
+- **Linux:** Run `sudo apt install python3` or the equivalent for your distribution.
+
+After installing, open a new terminal window and run `python --version` to confirm the version, then retry.
+
+### `install.py` fails partway through
+
+The installer saves a timestamped backup of your Claude config before it starts. If something goes wrong mid-install, your original settings are not lost.
+
+Re-run `python install.py`. The installer checks which steps succeeded and skips them — it will only retry what failed.
+
+If the problem persists, look at the error message. The installer prints the exact command that failed and a suggested fix. Run that command manually, then re-run `python install.py` to continue.
 
 ### "verify.py not found"
 
@@ -270,7 +304,11 @@ Then start a new Claude Code session.
 
 ### A tool was only partially installed
 
-Run `/stack` again. The installer detects partial installs and re-runs the installer for any tool that is not fully set up.
+Re-run whichever path you used:
+- **Standalone:** `python install.py`
+- **Skill:** `/stack`
+
+Both installers detect partial installs and re-run only the steps that are incomplete.
 
 ---
 
@@ -317,6 +355,6 @@ Replace `YYYYMMDD-HHMMSS` with the timestamp from the `ls` output.
 
 **Context window** — The amount of text Claude can hold in its active memory at one time. When the context window fills up, Claude starts to lose track of earlier parts of the conversation. Context-Mode helps delay this.
 
-**Idempotent** — Safe to run multiple times with the same result. `/stack` is idempotent: running it twice does not double-install anything.
+**Idempotent** — Safe to run multiple times with the same result. Both `python install.py` and `/stack` are idempotent: running either twice does not double-install anything.
 
 **Exit code** — A number a program returns when it finishes. Exit 0 means success. Exit 1 means something failed. Exit 2 means a config file is corrupted.

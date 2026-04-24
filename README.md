@@ -80,15 +80,24 @@ versions is untested.
 
 | Tool | Tested version |
 |------|---------------|
-| Longhand | 0.5.5 |
-| Context-Mode | 1.6.0 |
+| Longhand | 0.8.1 |
+| Context-Mode | 1.6.1 |
 | Python | 3.14.3 (pre-release; 3.10+ supported) |
 | Node.js | 18+ |
+
+**Last validated:** 2026-04-24 — stack's own pytest suite passes 75/75
+against current `scripts/verify.py` logic. Longhand's install surfaces
+(`longhand setup`, `longhand prompt-hook install`, `longhand mcp-server`)
+are unchanged across the 0.5.5 → 0.8.1 range per upstream CHANGELOG
+(additive changes only). Context-Mode 1.6.0 → 1.6.1 is a patch bump.
+End-to-end `install.py` run was not re-exercised against these specific
+versions during this refresh — run `longhand doctor` and `claude mcp list`
+after install to confirm runtime health.
 
 Pin Longhand if you need a reproducible install:
 
 ```bash
-pip install longhand==0.5.5
+pip install longhand==0.8.1
 ```
 
 Context-Mode is installed from a local clone — pin by checking out the

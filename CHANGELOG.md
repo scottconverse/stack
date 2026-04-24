@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Tested-versions table in `README.md` refreshed to current upstream:
+  Longhand `0.5.5` → `0.8.1`, Context-Mode `1.6.0` → `1.6.1`.
+- Added explicit **Last validated** date line (2026-04-24) to README.
+- Longhand pin example bumped to `pip install longhand==0.8.1`.
+
+### Notes
+- stack's pytest suite passes 75/75 against current `scripts/verify.py`.
+- Longhand install surfaces stack invokes (`longhand setup`,
+  `prompt-hook install`, `mcp-server`) are unchanged across the
+  0.5.5 → 0.8.1 range per upstream CHANGELOG — additive changes only
+  (`reconcile` MCP tool, staleness detection, recall narrative fixes).
+- End-to-end `install.py` run was not re-exercised against these
+  specific versions during this refresh. No code changes to
+  `install.py` or `scripts/verify.py`.
+
 ## [1.1.2] — 2026-04-16
 
 ### Fixed

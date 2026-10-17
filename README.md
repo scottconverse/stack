@@ -1,3 +1,5 @@
+> **Archived October 17, 2026.** This was the first-generation bundle (Longhand, Context-Mode, hardgate, `verify.py`). Nothing from it was ported: the harness-enforced layer it reached for now lives in [claude-hook-kit](https://github.com/scottconverse/claude-hook-kit) (per-project hooks with parity tests), and the prose layer in [dev-rigor-stack-lite](https://github.com/scottconverse/dev-rigor-stack-lite). All files remain readable here. This repository is read-only; history and issues are preserved.
+
 # stack · v1.1.2
 
 **One skill to install them all.**
